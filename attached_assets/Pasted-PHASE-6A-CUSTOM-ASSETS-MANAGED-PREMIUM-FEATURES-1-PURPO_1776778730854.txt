@@ -1,0 +1,238 @@
+PHASE 6A — CUSTOM ASSETS (MANAGED PREMIUM FEATURES)
+
+---
+
+1. PURPOSE
+
+---
+
+Introduce controlled customization features that allow schools to:
+
+* upload custom chess piece sets
+* define custom board themes
+* apply school branding
+
+These features are managed, validated, and tied to the school configuration.
+They are NOT free-form file uploads.
+
+---
+
+2. CORE PRINCIPLES
+
+---
+
+* All custom assets are structured (not arbitrary files)
+* Admin-controlled only
+* Fully validated before use
+* Safe fallback to built-in defaults
+* Stored via provider layer (no direct file handling)
+* Designed to work in both hosted and local deployments
+
+---
+
+3. FEATURE FLAGS
+
+---
+
+Add feature flags:
+
+enableCustomThemes
+enableCustomPieceUploads
+enableSchoolBranding
+
+These are admin-controlled.
+
+---
+
+4. CUSTOM PIECE SETS
+
+---
+
+4.1 Requirements
+
+* Must upload ALL 12 pieces:
+  wK, wQ, wR, wB, wN, wP
+  bK, bQ, bR, bB, bN, bP
+
+4.2 Supported formats
+
+* SVG (preferred)
+* PNG (allowed)
+
+4.3 Validation rules
+
+* all required files present
+* valid file types
+* file size limits
+* image loads successfully
+* dimensions or viewBox are valid
+
+4.4 Piece Set Model
+{
+id,
+schoolId,
+name,
+type: "custom",
+files: { wK, wQ, wR, wB, wN, wP, bK, bQ, bR, bB, bN, bP },
+createdAt,
+isActive
+}
+
+4.5 Behavior
+
+* preview before activation
+* admin selects active set
+* fallback to default if invalid
+
+---
+
+5. CUSTOM BOARD THEMES
+
+---
+
+5.1 Theme Model
+{
+id,
+schoolId,
+name,
+type: "custom",
+lightSquare,
+darkSquare,
+borderColor,
+highlightColor,
+moveDotColor,
+createdAt,
+isActive
+}
+
+5.2 Requirements
+
+* values must be valid colors
+* preview before activation
+* stored per school
+
+---
+
+6. STORAGE
+
+---
+
+All assets must use fileProvider:
+
+fileProvider.saveFile()
+fileProvider.loadFile()
+
+No direct filesystem access.
+
+Supports:
+
+* hosted storage (Supabase)
+* future local school storage
+
+---
+
+7. ADMIN CONTROLS
+
+---
+
+Admin can:
+
+* upload new piece set
+* preview piece set
+* activate/deactivate piece set
+* create/edit custom theme
+* select active theme
+* delete custom assets (with confirmation)
+
+---
+
+8. SAFETY / FALLBACK
+
+---
+
+If any asset fails:
+
+* revert to built-in default
+* log error in audit log
+* show user-friendly message
+
+---
+
+9. AUDIT LOGGING
+
+---
+
+Track:
+
+* asset upload
+* asset activation
+* asset deletion
+* theme changes
+* piece set changes
+
+---
+
+10. UI REQUIREMENTS
+
+---
+
+Add:
+
+* “Appearance” settings section
+* theme selector
+* piece set selector
+* upload interface (admin only)
+* preview board
+
+---
+
+11. DEPLOYMENT MODE RULES
+
+---
+
+HOSTED:
+
+* uploads allowed
+* stored in cloud provider
+
+SCHOOL:
+
+* uploads stored in local storage provider
+
+RESTRICTED:
+
+* uploads allowed only if local storage available
+* no external fetches
+
+---
+
+12. OUT OF SCOPE
+
+---
+
+* per-teacher customization (school-level only)
+* marketplace or sharing
+* paid billing system
+* partial piece overrides
+* animations
+
+---
+
+13. COMPLETION CRITERIA
+
+---
+
+Phase 6A is complete when:
+
+* admin can upload a full piece set
+* admin can create custom themes
+* assets validate correctly
+* preview works
+* fallback works
+* storage provider is used
+* audit logs capture changes
+* UI is clean and usable
+
+---
+
+## END PHASE 6A

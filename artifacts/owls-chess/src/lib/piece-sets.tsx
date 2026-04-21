@@ -1,10 +1,37 @@
 import type { CSSProperties, ReactElement } from "react";
+import { listCustomPieceSets, PIECE_KEYS } from "./custom-assets";
 
 export interface PieceSet {
   id: string;
   name: string;
   description: string;
   customPieces?: () => Record<string, (props: { squareWidth: number }) => ReactElement>;
+}
+
+function makeImagePieces(files: Record<string, string>) {
+  const pieces: Record<string, (props: { squareWidth: number }) => ReactElement> = {};
+  for (const key of PIECE_KEYS) {
+    const url = files[key];
+    pieces[key] = ({ squareWidth }) => (
+      <img
+        src={url}
+        alt={key}
+        onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
+        style={{ width: squareWidth * 0.92, height: squareWidth * 0.92, display: "block", margin: "auto", pointerEvents: "none" }}
+      />
+    );
+  }
+  return pieces;
+}
+
+export function getAllPieceSets(): PieceSet[] {
+  const customs: PieceSet[] = listCustomPieceSets().map(c => ({
+    id: c.id,
+    name: c.name + " (custom)",
+    description: "Custom piece set uploaded by your school admin.",
+    customPieces: () => makeImagePieces(c.files),
+  }));
+  return [...PIECE_SETS, ...customs];
 }
 
 // Letter-based fallback piece set (always available, never broken)
@@ -59,5 +86,5 @@ export const PIECE_SETS: PieceSet[] = [
 ];
 
 export function getPieceSet(id: string): PieceSet {
-  return PIECE_SETS.find(p => p.id === id) ?? PIECE_SETS[0];
+  return getAllPieceSets().find(p => p.id === id) ?? PIECE_SETS[0];
 }

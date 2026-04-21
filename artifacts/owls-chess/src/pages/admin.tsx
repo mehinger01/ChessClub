@@ -10,8 +10,22 @@ import { Download, Upload, Trash2, Shield, Database, Palette, FileJson, AlertTri
 import { toast } from "sonner";
 import { useSettings } from "../hooks/use-settings";
 import { getProviders } from "../providers";
-import { BOARD_THEMES } from "../lib/themes";
-import { PIECE_SETS } from "../lib/piece-sets";
+import { getAllThemes } from "../lib/themes";
+import { getAllPieceSets } from "../lib/piece-sets";
+import {
+  PIECE_KEYS,
+  type PieceKey,
+  listCustomThemes,
+  listCustomPieceSets,
+  saveCustomTheme,
+  deleteCustomTheme,
+  validateCustomTheme,
+  validateAndPreparePieceSet,
+  saveCustomPieceSet,
+  deleteCustomPieceSet,
+  type CustomBoardTheme,
+  type CustomPieceSet,
+} from "../lib/custom-assets";
 import { puzzles as bundledPuzzles } from "../data/puzzles";
 import { clearImportedLibrary } from "../providers/local";
 import type { AuditLogEntry } from "../providers/types";
@@ -24,6 +38,23 @@ export default function Admin() {
   const puzzleInputRef = useRef<HTMLInputElement>(null);
   const [audit, setAudit] = useState<AuditLogEntry[]>(() => providers.audit.list(100));
   const [puzzleLibSize, setPuzzleLibSize] = useState<number>(bundledPuzzles.length);
+  const [customThemes, setCustomThemes] = useState<CustomBoardTheme[]>(() => listCustomThemes());
+  const [customSets, setCustomSets] = useState<CustomPieceSet[]>(() => listCustomPieceSets());
+
+  useEffect(() => {
+    const refreshThemes = () => setCustomThemes(listCustomThemes());
+    const refreshSets = () => setCustomSets(listCustomPieceSets());
+    window.addEventListener("owls-themes", refreshThemes);
+    window.addEventListener("owls-pieces", refreshSets);
+    window.addEventListener("owls-storage", () => { refreshThemes(); refreshSets(); });
+    return () => {
+      window.removeEventListener("owls-themes", refreshThemes);
+      window.removeEventListener("owls-pieces", refreshSets);
+    };
+  }, []);
+
+  const allThemes = getAllThemes();
+  const allPieceSets = getAllPieceSets();
 
   useEffect(() => {
     const refresh = () => setAudit(getProviders().audit.list(100));
@@ -178,7 +209,7 @@ export default function Admin() {
           <div>
             <label className="text-sm font-medium mb-2 block">Board theme</label>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {BOARD_THEMES.map(t => (
+              {allThemes.map(t => (
                 <button
                   key={t.id}
                   onClick={() => update({ activeThemeId: t.id })}
@@ -199,7 +230,7 @@ export default function Admin() {
           <div>
             <label className="text-sm font-medium mb-2 block">Piece set</label>
             <div className="grid sm:grid-cols-2 gap-3">
-              {PIECE_SETS.map(p => (
+              {allPieceSets.map(p => (
                 <button
                   key={p.id}
                   onClick={() => update({ activePieceSetId: p.id })}
@@ -210,12 +241,39 @@ export default function Admin() {
                 </button>
               ))}
             </div>
-            {!settings.featureFlags.customPieceUploads && (
-              <p className="text-xs text-muted-foreground mt-2">Custom piece uploads are reserved for Phase 7 (productization).</p>
-            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Custom themes */}
+      {settings.featureFlags.customThemes && (
+        <CustomThemesCard
+          items={customThemes}
+          activeId={settings.activeThemeId}
+          onActivate={(id) => update({ activeThemeId: id })}
+          onDelete={(id) => {
+            deleteCustomTheme(id);
+            setCustomThemes(listCustomThemes());
+            if (settings.activeThemeId === id) update({ activeThemeId: "royal" });
+          }}
+          onCreated={() => setCustomThemes(listCustomThemes())}
+        />
+      )}
+
+      {/* Custom piece sets */}
+      {settings.featureFlags.customPieceUploads && (
+        <CustomPieceSetsCard
+          items={customSets}
+          activeId={settings.activePieceSetId}
+          onActivate={(id) => update({ activePieceSetId: id })}
+          onDelete={(id) => {
+            deleteCustomPieceSet(id);
+            setCustomSets(listCustomPieceSets());
+            if (settings.activePieceSetId === id) update({ activePieceSetId: "classic" });
+          }}
+          onCreated={() => setCustomSets(listCustomPieceSets())}
+        />
+      )}
 
       {/* Feature flags */}
       <Card>
@@ -224,8 +282,8 @@ export default function Admin() {
           <CardDescription>Admin-controlled toggles. Some features require a future phase to be useful.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <FlagRow label="Custom themes" hint="Enables future custom theme uploads (Phase 7)." value={settings.featureFlags.customThemes} disabled onChange={(v) => update({ featureFlags: { ...settings.featureFlags, customThemes: v } })} />
-          <FlagRow label="Custom piece uploads" hint="Enables admin-uploaded piece sets (Phase 7)." value={settings.featureFlags.customPieceUploads} disabled onChange={(v) => update({ featureFlags: { ...settings.featureFlags, customPieceUploads: v } })} />
+          <FlagRow label="Custom themes" hint="Lets admins define and activate school-branded board themes." value={settings.featureFlags.customThemes} onChange={(v) => update({ featureFlags: { ...settings.featureFlags, customThemes: v } })} />
+          <FlagRow label="Custom piece uploads" hint="Lets admins upload a full 12-piece custom set (SVG/PNG)." value={settings.featureFlags.customPieceUploads} onChange={(v) => update({ featureFlags: { ...settings.featureFlags, customPieceUploads: v } })} />
           <FlagRow label="Leaderboard" hint="Show 'Top Solvers' on the home page." value={settings.featureFlags.leaderboardEnabled} onChange={(v) => update({ featureFlags: { ...settings.featureFlags, leaderboardEnabled: v } })} />
         </CardContent>
       </Card>
@@ -330,6 +388,186 @@ function ProviderRow({ label, value, options, onChange, disabled }: { label: str
         </SelectContent>
       </Select>
     </div>
+  );
+}
+
+function CustomThemesCard({ items, activeId, onActivate, onDelete, onCreated }: {
+  items: CustomBoardTheme[]; activeId: string; onActivate: (id: string) => void; onDelete: (id: string) => void; onCreated: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [colors, setColors] = useState({ lightSquare: "#f1f5f9", darkSquare: "#1a365d", borderColor: "#94a3b8", highlightColor: "#fde047", moveDotColor: "#1d4ed8" });
+  const errors = validateCustomTheme({ name, ...colors });
+  const canSave = errors.length === 0;
+
+  const handleSave = () => {
+    if (!canSave) { toast.error(errors[0]); return; }
+    saveCustomTheme({ name, ...colors });
+    setName("");
+    onCreated();
+    toast.success("Custom theme saved");
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-serif">Custom Board Themes</CardTitle>
+        <CardDescription>Define a school-branded board. Pick five colors, preview, then activate.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid sm:grid-cols-2 gap-4">
+          <div className="space-y-3">
+            <div>
+              <label className="text-sm font-medium mb-1 block">Theme name</label>
+              <Input placeholder="e.g. Owls Royal" value={name} onChange={(e) => setName(e.target.value)} />
+            </div>
+            {(["lightSquare", "darkSquare", "borderColor", "highlightColor", "moveDotColor"] as const).map(k => (
+              <div key={k} className="flex items-center gap-3">
+                <label className="text-sm font-medium w-32 capitalize">{k.replace(/([A-Z])/g, " $1")}</label>
+                <input type="color" value={colors[k]} onChange={(e) => setColors({ ...colors, [k]: e.target.value })} className="w-10 h-8 rounded border border-border cursor-pointer" />
+                <Input value={colors[k]} onChange={(e) => setColors({ ...colors, [k]: e.target.value })} className="font-mono text-xs" />
+              </div>
+            ))}
+            <Button onClick={handleSave} disabled={!canSave}>Save theme</Button>
+          </div>
+          <div>
+            <div className="text-sm font-medium mb-2">Preview</div>
+            <div className="rounded-lg p-2 inline-block" style={{ background: colors.borderColor }}>
+              <div className="grid grid-cols-4 gap-0">
+                {Array.from({ length: 16 }).map((_, i) => {
+                  const row = Math.floor(i / 4); const col = i % 4;
+                  const dark = (row + col) % 2 === 1;
+                  const highlight = i === 5;
+                  return (
+                    <div key={i} className="w-12 h-12 relative" style={{ background: dark ? colors.darkSquare : colors.lightSquare }}>
+                      {highlight && <div className="absolute inset-0" style={{ background: colors.highlightColor, opacity: 0.5 }} />}
+                      {i === 9 && <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-3 rounded-full" style={{ background: colors.moveDotColor, opacity: 0.6 }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {items.length > 0 && (
+          <div className="border-t border-border/40 pt-3 space-y-2">
+            <div className="text-sm font-medium">Saved custom themes</div>
+            {items.map(t => (
+              <div key={t.id} className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="grid grid-cols-2 w-10 h-10 rounded overflow-hidden">
+                    <div style={{ background: t.lightSquare }} /><div style={{ background: t.darkSquare }} />
+                    <div style={{ background: t.darkSquare }} /><div style={{ background: t.lightSquare }} />
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{t.name}</div>
+                    <div className="text-xs text-muted-foreground">{activeId === t.id ? "Active" : "Saved"}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant={activeId === t.id ? "default" : "outline"} onClick={() => onActivate(t.id)}>{activeId === t.id ? "Active" : "Activate"}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete theme "${t.name}"?`)) onDelete(t.id); }}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CustomPieceSetsCard({ items, activeId, onActivate, onDelete, onCreated }: {
+  items: CustomPieceSet[]; activeId: string; onActivate: (id: string) => void; onDelete: (id: string) => void; onCreated: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [files, setFiles] = useState<Record<PieceKey, File | undefined>>({} as Record<PieceKey, File | undefined>);
+  const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
+
+  const setFileFor = (k: PieceKey, f: File | undefined) => {
+    const next = { ...files, [k]: f };
+    setFiles(next);
+    if (f) {
+      const url = URL.createObjectURL(f);
+      setPreviewUrls(prev => ({ ...prev, [k]: url }));
+    }
+  };
+
+  const allPresent = PIECE_KEYS.every(k => files[k]);
+
+  const handleSave = async () => {
+    setBusy(true);
+    try {
+      const result = await validateAndPreparePieceSet(name, files);
+      if (!result.ok) {
+        toast.error(`${result.errors.length} issue(s). First: ${result.errors[0]}`);
+        return;
+      }
+      saveCustomPieceSet(name, result.files!);
+      setName("");
+      setFiles({} as Record<PieceKey, File | undefined>);
+      setPreviewUrls({});
+      onCreated();
+      toast.success("Custom piece set saved");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-serif">Custom Piece Sets</CardTitle>
+        <CardDescription>Upload all 12 pieces (SVG or PNG, max 256KB each). Files are validated before activation.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div>
+          <label className="text-sm font-medium mb-1 block">Set name</label>
+          <Input placeholder="e.g. Owls School Set" value={name} onChange={(e) => setName(e.target.value)} />
+        </div>
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+          {PIECE_KEYS.map(k => (
+            <label key={k} className="flex flex-col items-center gap-1 cursor-pointer rounded-lg border border-border/50 p-2 hover:border-primary/50 transition">
+              <div className="w-12 h-12 flex items-center justify-center bg-muted/40 rounded">
+                {previewUrls[k] ? <img src={previewUrls[k]} alt={k} className="w-10 h-10 object-contain" /> : <span className="text-xs font-mono text-muted-foreground">{k}</span>}
+              </div>
+              <span className="text-xs font-mono">{k}</span>
+              <input type="file" accept="image/svg+xml,image/png" className="hidden" onChange={(e) => setFileFor(k, e.target.files?.[0])} />
+            </label>
+          ))}
+        </div>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSave} disabled={!allPresent || !name || busy}>{busy ? "Validating..." : "Save piece set"}</Button>
+          <span className="text-xs text-muted-foreground">{Object.values(files).filter(Boolean).length}/12 uploaded</span>
+        </div>
+
+        {items.length > 0 && (
+          <div className="border-t border-border/40 pt-3 space-y-2">
+            <div className="text-sm font-medium">Saved custom piece sets</div>
+            {items.map(s => (
+              <div key={s.id} className="flex items-center justify-between rounded-lg border border-border/40 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1">
+                    {(["wK", "wQ", "bK", "bQ"] as PieceKey[]).map(k => (
+                      <img key={k} src={s.files[k]} alt={k} className="w-6 h-6 object-contain bg-muted/40 rounded" />
+                    ))}
+                  </div>
+                  <div>
+                    <div className="text-sm font-medium">{s.name}</div>
+                    <div className="text-xs text-muted-foreground">{activeId === s.id ? "Active" : "Saved"}</div>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" variant={activeId === s.id ? "default" : "outline"} onClick={() => onActivate(s.id)}>{activeId === s.id ? "Active" : "Activate"}</Button>
+                  <Button size="sm" variant="ghost" onClick={() => { if (confirm(`Delete piece set "${s.name}"?`)) onDelete(s.id); }}><Trash2 className="w-4 h-4" /></Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

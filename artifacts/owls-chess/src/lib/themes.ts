@@ -50,6 +50,20 @@ export const BOARD_THEMES: BoardTheme[] = [
   },
 ];
 
+import { listCustomThemes } from "./custom-assets";
+
+export function getAllThemes(): BoardTheme[] {
+  const customs: BoardTheme[] = listCustomThemes().map(c => ({
+    id: c.id,
+    name: c.name + " (custom)",
+    lightSquare: c.lightSquare,
+    darkSquare: c.darkSquare,
+    highlightColor: c.highlightColor,
+    description: "Custom theme defined by your school admin.",
+  }));
+  return [...BOARD_THEMES, ...customs];
+}
+
 export function getTheme(id: string): BoardTheme {
-  return BOARD_THEMES.find(t => t.id === id) ?? BOARD_THEMES[0];
+  return getAllThemes().find(t => t.id === id) ?? BOARD_THEMES[0];
 }
