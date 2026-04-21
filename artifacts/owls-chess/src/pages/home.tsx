@@ -26,10 +26,6 @@ export default function Home() {
               transition={{ duration: 0.6 }}
               className="flex-1 text-center md:text-left"
             >
-              <div className="inline-flex items-center justify-center px-3 py-1 rounded-full bg-secondary/20 text-secondary-foreground text-sm font-medium mb-6 border border-secondary/30 backdrop-blur-sm">
-                <Trophy className="w-4 h-4 mr-2" />
-                Regional Champions 2024
-              </div>
               <h1 className="text-5xl md:text-7xl font-serif font-bold tracking-tight mb-6 leading-tight">
                 Master the <br/><span className="text-secondary">Royal Game</span>.
               </h1>
