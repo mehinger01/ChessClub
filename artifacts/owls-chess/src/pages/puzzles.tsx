@@ -393,13 +393,13 @@ export default function Puzzles() {
 
       <div className="grid lg:grid-cols-3 gap-8 items-start flex-1">
         <div className="lg:col-span-2 bg-card p-4 sm:p-6 rounded-2xl shadow-sm border border-border/50 flex flex-col items-center justify-center min-h-[60vh] relative">
-          <div className="w-full max-w-[640px] mb-4 flex items-center justify-between">
+          <div className="w-full mb-4 flex items-center justify-between mx-auto" style={{ maxWidth: "min(560px, calc(100vh - 220px))" }}>
             {sideToMoveBadge}
             <span className="text-xs text-muted-foreground">
               Puzzle {queueIndex + 1} of {queue.length || 1}
             </span>
           </div>
-          <div className="w-full max-w-[640px] aspect-square">
+          <div className="w-full aspect-square mx-auto" style={{ maxWidth: "min(560px, calc(100vh - 220px))" }}>
             <Chessboard
               id="PuzzleBoard"
               position={fen}

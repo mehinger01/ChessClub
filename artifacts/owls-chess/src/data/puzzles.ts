@@ -182,7 +182,7 @@ export const puzzles: Puzzle[] = [
     difficulty: 3,
     sideToMove: "white",
     fen: "4k3/8/8/8/8/8/4q3/4RK2 w - - 0 1",
-    solution: ["Rxe2"],
+    solution: ["Rxe2+"],
     hints: [
       "The black queen has nothing behind her.",
       "Pinned pieces can't move — they can be captured for free.",
@@ -215,7 +215,7 @@ export const puzzles: Puzzle[] = [
     theme: "discovered-attack",
     difficulty: 3,
     sideToMove: "white",
-    fen: "4k3/8/8/8/8/8/3N4/3RK3 w - - 0 1",
+    fen: "3k4/8/8/8/8/8/3N4/3RK3 w - - 0 1",
     solution: ["Nc4+"],
     hints: [
       "Your knight is blocking your rook's check.",
