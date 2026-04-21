@@ -57,7 +57,7 @@ export default function Puzzles() {
 
   const fallback: Puzzle = useMemo(() => library[0] ?? {
     id: "empty", title: "No puzzles", theme: "n/a", difficulty: 1, sideToMove: "white",
-    fen: "8/8/8/8/8/8/8/8 w - - 0 1", solution: [], hints: ["", "", ""], explanation: "",
+    fen: "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", solution: [], hints: ["", "", ""], explanation: "",
     feedbackCorrect: "", feedbackIncorrect: "",
   }, [library]);
   const currentPuzzle = queue[queueIndex] ?? fallback;
