@@ -1,0 +1,484 @@
+PHASE 5 — PRODUCTION-READY FOUNDATION (LOCAL-FIRST, PROVIDER-BASED, MIGRATION-SAFE)
+
+---
+
+1. PURPOSE
+
+---
+
+Phase 5 transforms the app into a stable, portable, role-based system that:
+
+* Works in real school environments
+* Supports Admin, Teacher, Student roles
+* Persists and restores data reliably
+* Can run fully local with no external calls
+* Can run hosted for pilot use
+* Can be migrated to school servers later
+* Prepares for future multi-school productization
+* Introduces theme and piece customization foundations
+
+---
+
+2. CORE ARCHITECTURE REQUIREMENTS (CRITICAL)
+
+---
+
+2.1 PROVIDER LAYER (MANDATORY)
+All data access MUST go through provider/service layers.
+
+NO direct calls to:
+
+* Supabase
+* localStorage
+* file system
+* external APIs
+
+Instead use interfaces:
+
+storageProvider:
+saveStructuredData()
+loadStructuredData()
+exportData()
+importData()
+
+databaseProvider:
+create()
+read()
+update()
+delete()
+query()
+
+authProvider:
+login()
+logout()
+createUser()
+resetPassword()
+requirePasswordReset()
+
+fileProvider:
+saveFile()
+loadFile()
+listFiles()
+
+puzzleSourceProvider:
+loadLibrary()
+importLibrary()
+validateLibrary()
+
+RULE:
+App logic must NEVER depend on a specific backend implementation.
+
+---
+
+## 2.2 LOCAL-FIRST REQUIREMENT (MANDATORY)
+
+System must fully function with:
+
+* local database
+* local file storage
+* no external API calls
+* local puzzle library
+* admin-controlled authentication/reset
+
+This is required for school deployment.
+
+---
+
+## 2.3 DEPLOYMENT MODES (MANDATORY)
+
+deploymentMode:
+"hosted"
+"school"
+"restricted"
+
+Behavior:
+
+HOSTED:
+
+* Supabase allowed
+* Email reset allowed
+* External calls allowed
+
+SCHOOL:
+
+* Local DB preferred
+* Internal services only
+* External calls disabled by default
+
+RESTRICTED:
+
+* NO external calls
+* Local puzzle source only
+* Admin-managed authentication only
+
+All providers must respect deploymentMode.
+
+---
+
+3. USER ROLES
+
+---
+
+ADMIN:
+
+* Manage teachers, students
+* Set storage mode
+* Set deployment mode
+* Control puzzle source
+* Import/export data
+* Manage themes and piece sets
+* View audit logs
+
+TEACHER:
+
+* View assigned students
+* View stats
+* Assign puzzles
+* Reset student progress (if allowed)
+
+STUDENT:
+
+* Login via email
+* Forced password reset on first login
+* View own stats
+* Complete puzzles/games
+
+---
+
+4. MULTI-TENANT FOUNDATION
+
+---
+
+Add schoolId to all:
+
+* users
+* students
+* teachers
+* stats
+* puzzle attempts
+* settings
+* themes
+* piece sets
+* audit logs
+
+Do NOT build multi-school UI yet.
+
+---
+
+5. AUTHENTICATION
+
+---
+
+Support:
+
+* Admin login
+* Teacher login
+* Student login
+
+Student Flow:
+
+* Admin creates account
+* Student receives generic password
+* Must reset password on first login
+
+Auth must support:
+
+* hosted provider
+* local provider fallback
+
+---
+
+6. PERSISTENCE
+
+---
+
+Persist:
+
+* users
+* students
+* stats
+* puzzle attempts
+* settings
+* themes
+* piece sets
+* audit logs
+
+Auto-save triggers:
+
+* user changes
+* student changes
+* puzzle completion
+* stat updates
+* settings changes
+
+---
+
+7. STORAGE ABSTRACTION
+
+---
+
+Must support:
+
+* hosted storage (Supabase)
+* local storage (future school server)
+
+App must not know which is used.
+
+---
+
+8. PUZZLE SOURCE ABSTRACTION
+
+---
+
+Must support:
+
+* local file import
+* admin-defined source
+
+Do NOT assume internet access.
+
+---
+
+9. DATA MODELS
+
+---
+
+User:
+
+* id
+* schoolId
+* email
+* role
+* passwordResetRequired
+* createdAt
+
+Student:
+
+* id
+* schoolId
+* email
+* firstName
+* lastInitial
+* displayName
+* assignedTeacherId
+* currentLevel
+
+StudentStats:
+
+* studentId
+* schoolId
+* puzzlesAttempted
+* puzzlesCorrect
+* puzzlesIncorrect
+* firstTryCorrect
+* hintsUsed
+* score
+
+BoardTheme:
+
+* id
+* schoolId
+* name
+* lightSquare
+* darkSquare
+* highlightColor
+* isActive
+
+PieceSet:
+
+* id
+* schoolId
+* name
+* files (wK, wQ, etc.)
+* isActive
+
+AppSettings:
+
+* schoolId
+* deploymentMode
+* storageProvider
+* puzzleSourceProvider
+* allowExternalCalls
+
+AuditLog:
+
+* id
+* schoolId
+* actorUserId
+* actionType
+* targetType
+* timestamp
+
+---
+
+10. DASHBOARDS
+
+---
+
+Teacher Dashboard:
+
+* student list
+* stats summary
+* assign/reset actions
+
+Student Dashboard:
+
+* personal stats
+* recent activity
+* assigned puzzles
+
+Stats must use ONE shared data source.
+
+---
+
+11. AUDIT LOGGING
+
+---
+
+Track:
+
+* user creation
+* password resets
+* student changes
+* puzzle imports
+* settings changes
+* theme/piece changes
+
+---
+
+12. IMPORT / EXPORT
+
+---
+
+Must support:
+
+* full system export
+* full system import
+* schema validation
+* safe failure handling
+
+---
+
+13. THEME SYSTEM
+
+---
+
+Must include:
+
+* multiple built-in themes
+* theme config object
+* admin selects active theme
+* persistent setting
+
+Do NOT require custom uploads yet.
+
+---
+
+14. PIECE SET SYSTEM
+
+---
+
+Must include:
+
+* built-in sets
+* named piece sets
+* active selection
+* fallback to default if broken
+
+Optional:
+
+* admin-only custom upload (full 12 files)
+
+---
+
+15. FEATURE FLAGS
+
+---
+
+Include:
+
+* customThemes
+* customPieceUploads
+* leaderboardEnabled
+
+Admin-controlled.
+
+---
+
+16. RELIABILITY
+
+---
+
+Must handle:
+
+* missing assets
+* invalid data
+* import errors
+* restricted mode conflicts
+
+No crashes. Always fallback safely.
+
+---
+
+17. DEBUG PANEL
+
+---
+
+Show:
+
+* deployment mode
+* active providers
+* current user/role
+* active student
+* theme/piece set
+* errors
+
+Toggleable.
+
+---
+
+18. MIGRATION READINESS
+
+---
+
+Before leaving Replit:
+
+* no hardcoded secrets
+* provider layer complete
+* no Replit-only dependencies
+* GitHub-ready
+
+---
+
+19. PERFORMANCE
+
+---
+
+Must remain responsive for:
+
+* multiple users
+* dashboards
+* theme switching
+* imports
+
+---
+
+20. COMPLETION CRITERIA
+
+---
+
+Phase 5 is complete when:
+
+* roles work
+* login works
+* stats display correctly
+* provider layer is implemented
+* local-first requirement is satisfied
+* deployment modes work
+* themes and piece sets work
+* import/export works
+* system is stable for pilot use
+
+---
+
+## END PHASE 5 SPEC
