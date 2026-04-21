@@ -1,0 +1,8 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "uKlchWKd3bdXmWeEM8FCt"
+uri = "file://artifacts/owls-chess/src/assets/logo.png"
+type = "image"
+title = "Owl chess club logo"

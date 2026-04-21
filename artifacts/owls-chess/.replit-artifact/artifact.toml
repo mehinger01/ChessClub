@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Owls Chess Club"
+version = "1.0.0"
+id = "artifacts/owls-chess"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20605
+
+[services.development]
+run = "pnpm --filter @workspace/owls-chess run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/owls-chess", "run", "build" ]
+publicDir = "artifacts/owls-chess/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20605"
+BASE_PATH = "/"
