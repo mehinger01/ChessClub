@@ -8,6 +8,7 @@ import Home from "./pages/home";
 import Play from "./pages/play";
 import Puzzles from "./pages/puzzles";
 import Roster from "./pages/roster";
+import Admin from "./pages/admin";
 
 const queryClient = new QueryClient();
 
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/play" component={Play} />
       <Route path="/puzzles" component={Puzzles} />
       <Route path="/roster" component={Roster} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </Switch>
   );

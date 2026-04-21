@@ -3,7 +3,7 @@ import { useStudents } from "../hooks/use-students";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 import logo from "../assets/logo.png";
-import { BookOpen, Users, Play } from "lucide-react";
+import { BookOpen, Users, Play, Settings } from "lucide-react";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -33,6 +33,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <NavButton href="/roster" active={location === "/roster"} icon={<Users className="w-4 h-4 mr-2" />}>
                 Roster
               </NavButton>
+              <NavButton href="/admin" active={location === "/admin"} icon={<Settings className="w-4 h-4 mr-2" />}>
+                Admin
+              </NavButton>
             </nav>
           </div>
           
@@ -60,6 +63,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Button>
               <Button variant="ghost" size="icon" asChild>
                 <Link href="/roster"><Users className="w-5 h-5 text-primary" /></Link>
+              </Button>
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/admin"><Settings className="w-5 h-5 text-primary" /></Link>
               </Button>
             </nav>
           </div>

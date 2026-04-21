@@ -2,6 +2,10 @@ import { useState, useCallback, useMemo, useEffect } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { useStudents } from "../hooks/use-students";
+import { useSettings } from "../hooks/use-settings";
+import { getTheme } from "../lib/themes";
+import { getPieceSet } from "../lib/piece-sets";
+import { getProviders } from "../providers";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { RefreshCw, RotateCcw, RotateCw, Trophy } from "lucide-react";
@@ -12,6 +16,10 @@ const DEBUG_KEY = "owls_debug_panel";
 
 export default function Play() {
   const { activeStudent, recordGameResult } = useStudents();
+  const { settings } = useSettings();
+  const theme = getTheme(settings.activeThemeId);
+  const pieceSet = getPieceSet(settings.activePieceSetId);
+  const customPieces = useMemo(() => pieceSet.customPieces?.(), [pieceSet.id]);
 
   const [game, setGame] = useState(new Chess());
   const [fen, setFen] = useState(game.fen());
@@ -153,6 +161,13 @@ export default function Play() {
     }
     recordGameResult(result);
     setResultRecorded(true);
+    getProviders().audit.log({
+      actorUserId: "local-admin",
+      actionType: "game.recorded",
+      targetType: "student",
+      targetId: activeStudent.id,
+      details: { result },
+    });
     toast.success(`Recorded ${result} for ${activeStudent.displayName}`);
   };
 
@@ -162,8 +177,8 @@ export default function Play() {
     localStorage.setItem(DEBUG_KEY, v ? "1" : "0");
   };
 
-  const darkColor = "#1a365d";
-  const lightColor = "#f1f5f9";
+  const darkColor = theme.darkSquare;
+  const lightColor = theme.lightSquare;
 
   // Castling rights and en passant from FEN
   const fenParts = fen.split(" ");
@@ -196,6 +211,7 @@ export default function Play() {
               customLightSquareStyle={{ backgroundColor: lightColor }}
               customSquareStyles={{ ...checkSquares, ...moveSquares, ...optionSquares }}
               animationDuration={200}
+              customPieces={customPieces}
             />
           </div>
 

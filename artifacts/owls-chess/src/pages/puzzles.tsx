@@ -2,7 +2,12 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { useStudents } from "../hooks/use-students";
-import { puzzles, PUZZLE_THEMES } from "../data/puzzles";
+import { useSettings } from "../hooks/use-settings";
+import { usePuzzleLibrary } from "../hooks/use-puzzle-library";
+import { getTheme } from "../lib/themes";
+import { getPieceSet } from "../lib/piece-sets";
+import { getProviders } from "../providers";
+import { PUZZLE_THEMES } from "../data/puzzles";
 import type { Puzzle } from "../lib/storage";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "../components/ui/card";
@@ -14,8 +19,8 @@ import { toast } from "sonner";
 type Mode = "puzzle" | "guided";
 const DEBUG_KEY = "owls_debug_panel";
 
-function buildQueue(filterDifficulty: string, filterTheme: string, usedIds: string[]): Puzzle[] {
-  let pool = puzzles.slice();
+function buildQueue(library: Puzzle[], filterDifficulty: string, filterTheme: string, usedIds: string[]): Puzzle[] {
+  let pool = library.slice();
   if (filterDifficulty !== "all") {
     pool = pool.filter(p => String(p.difficulty) === filterDifficulty);
   }
@@ -35,6 +40,11 @@ function buildQueue(filterDifficulty: string, filterTheme: string, usedIds: stri
 
 export default function Puzzles() {
   const { activeStudent, recordPuzzleAttempt, resetStudentSession } = useStudents();
+  const { settings } = useSettings();
+  const { library, loading: libraryLoading } = usePuzzleLibrary();
+  const theme = getTheme(settings.activeThemeId);
+  const pieceSet = getPieceSet(settings.activePieceSetId);
+  const customPieces = useMemo(() => pieceSet.customPieces?.(), [pieceSet.id]);
 
   const [mode, setMode] = useState<Mode>("puzzle");
   const [filterDifficulty, setFilterDifficulty] = useState<string>("all");
@@ -42,10 +52,15 @@ export default function Puzzles() {
   const [debugOn, setDebugOn] = useState<boolean>(() => localStorage.getItem(DEBUG_KEY) === "1");
   const [teacherOpen, setTeacherOpen] = useState(false);
 
-  const [queue, setQueue] = useState<Puzzle[]>(() => buildQueue("all", "all", activeStudent?.usedPuzzleIds ?? []));
+  const [queue, setQueue] = useState<Puzzle[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
 
-  const currentPuzzle = queue[queueIndex] ?? puzzles[0];
+  const fallback: Puzzle = useMemo(() => library[0] ?? {
+    id: "empty", title: "No puzzles", theme: "n/a", difficulty: 1, sideToMove: "white",
+    fen: "8/8/8/8/8/8/8/8 w - - 0 1", solution: [], hints: ["", "", ""], explanation: "",
+    feedbackCorrect: "", feedbackIncorrect: "",
+  }, [library]);
+  const currentPuzzle = queue[queueIndex] ?? fallback;
 
   const [game, setGame] = useState(() => new Chess(currentPuzzle.fen));
   const [fen, setFen] = useState(currentPuzzle.fen);
@@ -57,12 +72,13 @@ export default function Puzzles() {
   const [scoreEarned, setScoreEarned] = useState<number | null>(null);
   const [recorded, setRecorded] = useState(false);
 
-  // Rebuild queue when filters or student changes
+  // Rebuild queue when filters, student, or library changes
   useEffect(() => {
-    const next = buildQueue(filterDifficulty, filterTheme, activeStudent?.usedPuzzleIds ?? []);
+    if (libraryLoading) return;
+    const next = buildQueue(library, filterDifficulty, filterTheme, activeStudent?.usedPuzzleIds ?? []);
     setQueue(next);
     setQueueIndex(0);
-  }, [filterDifficulty, filterTheme, activeStudent?.id, activeStudent?.usedPuzzleIds.length]);
+  }, [filterDifficulty, filterTheme, activeStudent?.id, activeStudent?.usedPuzzleIds.length, library, libraryLoading]);
 
   // Reset puzzle state when puzzle changes
   useEffect(() => {
@@ -87,6 +103,13 @@ export default function Puzzles() {
     setScoreEarned(score);
     if (activeStudent) {
       recordPuzzleAttempt(currentPuzzle, { correct, hintsUsed });
+      getProviders().audit.log({
+        actorUserId: "local-admin",
+        actionType: correct ? "puzzle.solved" : "puzzle.failed",
+        targetType: "puzzle",
+        targetId: currentPuzzle.id,
+        details: { studentId: activeStudent.id, hintsUsed },
+      });
     }
   }, [recorded, activeStudent, currentPuzzle, recordPuzzleAttempt]);
 
@@ -245,8 +268,8 @@ export default function Puzzles() {
     toast.success("Session puzzles reset for " + activeStudent.displayName);
   };
 
-  const darkColor = "#1a365d";
-  const lightColor = "#f1f5f9";
+  const darkColor = theme.darkSquare;
+  const lightColor = theme.lightSquare;
 
   // King-in-check highlight
   const checkSquares = useMemo(() => {
@@ -267,7 +290,7 @@ export default function Puzzles() {
   }, [game]);
 
   const usedCount = activeStudent?.usedPuzzleIds.length ?? 0;
-  const availableCount = puzzles.length - usedCount;
+  const availableCount = library.length - usedCount;
   const totalScore = activeStudent?.puzzleScore ?? 0;
 
   const visibleHints = currentPuzzle.hints.slice(0, hintsRevealed);
@@ -385,6 +408,7 @@ export default function Puzzles() {
               boardOrientation={currentPuzzle.sideToMove}
               customDarkSquareStyle={{ backgroundColor: darkColor }}
               customLightSquareStyle={{ backgroundColor: lightColor }}
+              customPieces={customPieces}
               customSquareStyles={{ ...checkSquares, ...optionSquares, ...moveSquares }}
               animationDuration={200}
               arePiecesDraggable={puzzleState === "playing" && game.turn() === sideChar}
