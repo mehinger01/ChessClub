@@ -128,7 +128,7 @@ export default function Home() {
                     Top Solvers
                   </CardTitle>
                   <CardDescription>
-                    Highest puzzle accuracy this week
+                    Highest puzzle scores in the club
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="flex-1 flex flex-col">
@@ -147,8 +147,8 @@ export default function Home() {
                             <div className="font-medium text-foreground">{student.displayName}</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-sm font-bold text-primary">{student.solved} solved</div>
-                            <div className="text-xs text-muted-foreground">{Math.round((student.solved / Math.max(1, student.attempts)) * 100)}% acc</div>
+                            <div className="text-sm font-bold text-primary">{student.puzzleScore} pts</div>
+                            <div className="text-xs text-muted-foreground">{student.puzzlesCorrect} solved · L{student.currentLevel}</div>
                           </div>
                         </div>
                       ))}

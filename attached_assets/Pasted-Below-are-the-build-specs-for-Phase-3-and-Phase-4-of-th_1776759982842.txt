@@ -1,0 +1,1097 @@
+Below are the build specs for Phase 3 and Phase 4 of the chess app, written so they can be handed to a developer cleanly.
+
+
+---
+
+Phase 3 Spec — Game State, Rule Validation, and Real Chess Logic
+
+Purpose
+
+Turn the board from “pieces can move” into a true chess game engine that correctly tracks position, validates special rules, and determines game status.
+
+
+---
+
+Primary Goal
+
+The app must know:
+
+whose turn it is
+
+what moves are legal
+
+whether a king is in check
+
+whether the game is checkmate, stalemate, or still active
+
+what special moves are allowed at any moment
+
+
+
+---
+
+Required Features
+
+3.1 Turn and Move State
+
+The system must track:
+
+current player to move
+
+move number
+
+selected piece
+
+legal destinations for selected piece
+
+captured pieces
+
+whether each king or rook has moved
+
+whether the last move created en passant availability
+
+
+
+---
+
+3.2 Legal Move Validation
+
+A move is only allowed if:
+
+the piece’s movement pattern is legal
+
+the destination square is valid
+
+no friendly piece occupies the destination
+
+path-based pieces do not jump illegally
+
+the move does not leave that side’s king in check
+
+
+This means the app must:
+
+1. generate candidate moves
+
+
+2. simulate the move
+
+
+3. test king safety
+
+
+4. reject illegal results
+
+
+
+
+---
+
+3.3 Check Detection
+
+After every move, determine whether:
+
+white king is in check
+
+black king is in check
+
+
+The app should visually indicate check clearly.
+
+UI minimum:
+
+highlight checked king’s square
+
+display text such as: “White is in check”
+
+
+
+---
+
+3.4 Checkmate Detection
+
+A side is in checkmate if:
+
+its king is in check
+
+it has no legal moves that remove the check
+
+
+UI minimum:
+
+display winner
+
+freeze board or enter post-game mode
+
+offer Reset Game
+
+
+
+---
+
+3.5 Stalemate Detection
+
+A side is in stalemate if:
+
+its king is not in check
+
+it has no legal moves
+
+
+UI minimum:
+
+display Draw by stalemate
+
+freeze board or enter post-game mode
+
+
+
+---
+
+3.6 Castling
+
+Support both:
+
+kingside castling
+
+queenside castling
+
+
+Castling is legal only if:
+
+king has not moved
+
+involved rook has not moved
+
+squares between king and rook are empty
+
+king is not currently in check
+
+king does not pass through check
+
+king does not end in check
+
+
+UI behavior:
+
+allow castling by moving king
+
+rook must reposition automatically
+
+
+
+---
+
+3.7 En Passant
+
+Support en passant when:
+
+a pawn advances two squares
+
+it lands adjacent to an opposing pawn
+
+the opposing pawn captures on the very next move only
+
+
+System requirement:
+
+en passant target square must be tracked for one turn only
+
+
+
+---
+
+3.8 Pawn Promotion
+
+When a pawn reaches the back rank:
+
+pause move completion
+
+show promotion options:
+
+queen
+
+rook
+
+bishop
+
+knight
+
+
+
+Default behavior:
+
+no auto-queen unless intentionally specified
+
+
+UI requirement:
+
+simple promotion picker overlay
+
+
+
+---
+
+3.9 Move History
+
+Track every move in order.
+
+Each move entry should include:
+
+piece moved
+
+from square
+
+to square
+
+capture yes/no
+
+check yes/no
+
+special tags if applicable:
+
+castle
+
+en passant
+
+promotion
+
+
+
+Optional but recommended:
+
+algebraic notation output
+
+
+
+---
+
+3.10 Undo and Reset
+
+Support:
+
+Undo Last Move
+
+Reset Game
+
+
+Undo must restore:
+
+board position
+
+turn
+
+moved flags
+
+en passant state
+
+captured pieces
+
+game status
+
+
+
+---
+
+Recommended Internal Data Structure
+
+Board
+
+Use a clean 8×8 structure or flat 64-square array.
+
+Each piece object should include:
+
+type: king, queen, rook, bishop, knight, pawn
+
+color: white or black
+
+row
+
+col
+
+hasMoved
+
+id
+
+
+Game State Object
+
+Should include:
+
+board
+
+currentTurn
+
+selectedSquare
+
+legalMoves
+
+moveHistory
+
+capturedWhite
+
+capturedBlack
+
+whiteKingPosition
+
+blackKingPosition
+
+enPassantTarget
+
+gameStatus
+
+
+gameStatus values:
+
+active
+
+check
+
+checkmate
+
+stalemate
+
+promotion_pending
+
+
+
+---
+
+UI Requirements for Phase 3
+
+At minimum, the app must show:
+
+current turn
+
+selected square
+
+legal move highlights
+
+check indicator
+
+captured pieces
+
+reset button
+
+undo button
+
+promotion chooser when needed
+
+end-of-game message
+
+
+
+---
+
+Debug Requirements
+
+Add a toggleable debug panel showing:
+
+current turn
+
+selected piece
+
+legal moves count
+
+check status
+
+castling rights
+
+en passant target
+
+move history count
+
+game status
+
+
+This should be easy to turn on/off.
+
+
+---
+
+Completion Standard for Phase 3
+
+Phase 3 is complete when:
+
+all normal moves work legally
+
+illegal moves are blocked
+
+king safety is enforced
+
+castling works correctly
+
+en passant works correctly
+
+promotion works correctly
+
+check, checkmate, and stalemate are correctly detected
+
+move history, reset, and undo work reliably
+
+
+
+---
+
+Phase 4 Spec — Learning System, Puzzles, Students, and Feedback
+
+Purpose
+
+Turn the chess game into a teaching platform for a high school chess club, not just a board.
+
+This is the layer that makes the app instructionally valuable.
+
+
+---
+
+Primary Goal
+
+The app must support:
+
+puzzles
+
+guided learning
+
+student identification
+
+score tracking
+
+move feedback
+
+progress over time
+
+
+
+---
+
+Required Features
+
+4.1 Student Entry System
+
+There must be a student input area that stores:
+
+First Name
+
+Last Initial
+
+
+Example:
+
+Jake M
+
+Ava T
+
+
+Each student should have an associated data row/object that other modules can reference.
+
+
+---
+
+4.2 Student Record Structure
+
+Each student should be tied to a reusable record containing:
+
+firstName
+
+lastInitial
+
+displayName
+
+puzzlesAttempted
+
+puzzlesCorrect
+
+puzzlesIncorrect
+
+puzzleScore
+
+gamesPlayed
+
+wins
+
+losses
+
+draws
+
+lessonsCompleted
+
+currentLevel
+
+notes (optional)
+
+
+This must be structured so any list, mode, or report can refer back to the same student record.
+
+
+---
+
+4.3 Puzzle Mode
+
+Create a dedicated puzzle mode.
+
+Each puzzle must define:
+
+board position
+
+side to move
+
+correct move or move sequence
+
+instructional theme
+
+difficulty level
+
+feedback text
+
+
+Examples of themes:
+
+mate in one
+
+mate in two
+
+forks
+
+pins
+
+skewers
+
+winning material
+
+king safety
+
+opening principles
+
+endgame basics
+
+
+
+---
+
+4.4 Side-to-Move Display
+
+Every puzzle must clearly show:
+
+White to move or Black to move
+
+
+This should be visually obvious because beginners may miss it.
+
+
+---
+
+4.5 Correctness Checking
+
+Puzzle answers must be checked against the expected solution.
+
+System should support:
+
+one-move solutions
+
+multi-move sequences later if needed
+
+
+On a wrong move:
+
+do not just fail silently
+
+provide immediate feedback
+
+
+
+---
+
+4.6 Feedback System
+
+Feedback should be instructional, not just right/wrong.
+
+Examples:
+
+Correct — this forks the king and rook
+
+Not quite — that move attacks, but it does not solve the immediate threat
+
+Try again — look for checks first
+
+Good thought, but your queen leaves the king exposed
+
+
+Feedback categories:
+
+correct
+
+incorrect
+
+hint
+
+explanation
+
+
+
+---
+
+4.7 Hint System
+
+Each puzzle should allow optional hints.
+
+Hint design should escalate:
+
+1. broad clue
+
+“Look for forcing moves.”
+
+
+
+2. narrower clue
+
+“Start by checking the king.”
+
+
+
+3. specific clue
+
+“The queen move to g5 creates the key threat.”
+
+
+
+
+Hints should not reveal the answer immediately unless the final hint level is reached.
+
+
+---
+
+4.8 Puzzle Progression
+
+Puzzles should be grouped by level or topic.
+
+Suggested progression:
+
+Level 1: piece movement and simple captures
+
+Level 2: one-move tactics
+
+Level 3: king safety and check
+
+Level 4: mate patterns
+
+Level 5: multi-move tactics and endgame ideas
+
+
+The system should support assigning puzzles by:
+
+random
+
+level
+
+theme
+
+
+
+---
+
+4.9 Non-Repeating Puzzle Logic
+
+Do not loop the same puzzles repeatedly in a session unless all available puzzles in that category are exhausted.
+
+System should track:
+
+puzzle IDs already used
+
+used by student
+
+used in current session
+
+mastery status if applicable
+
+
+Recommended behavior:
+
+shuffle from available unused puzzles first
+
+only recycle after pool exhaustion
+
+
+
+---
+
+4.10 Scoring System
+
+Track puzzle performance with at least:
+
+total attempted
+
+total correct
+
+total incorrect
+
+first-try correct
+
+hints used
+
+score by theme
+
+score by difficulty
+
+
+Suggested scoring model:
+
+correct first try = 2 points
+
+correct after hint = 1 point
+
+incorrect = 0 points
+
+
+Keep scoring simple.
+
+
+---
+
+4.11 Lesson / Practice Modes
+
+Support at least 3 learning modes:
+
+A. Free Play
+
+regular chess game
+
+no puzzle validation
+
+can still track student game result
+
+
+B. Puzzle Mode
+
+student solves assigned positions
+
+move validation tied to solution
+
+
+C. Guided Practice
+
+app highlights legal moves
+
+gives stronger hints
+
+explains why a move is good or bad
+
+
+
+---
+
+4.12 Instructor-Friendly Classroom Use
+
+The system should be easy to use in a club or classroom setting.
+
+Must support:
+
+quick student entry
+
+quick puzzle loading
+
+visible turn indicator
+
+visible score/progress
+
+minimal clutter
+
+
+Should avoid:
+
+too many menus
+
+hidden state
+
+overly fancy animations that slow use
+
+
+
+---
+
+4.13 Basic Reporting
+
+Provide a simple way to see student progress.
+
+At minimum show:
+
+student name
+
+puzzles attempted
+
+correct
+
+incorrect
+
+score
+
+current level
+
+
+Later expansion can include:
+
+by tactic type
+
+by week
+
+by club session
+
+
+
+---
+
+4.14 Teacher / Admin Controls
+
+Add lightweight controls for:
+
+add student
+
+select student
+
+reset student session
+
+load puzzle category
+
+load next puzzle
+
+reveal answer
+
+toggle hints
+
+toggle debug
+
+
+
+---
+
+4.15 Instructional Design Rules
+
+The learning layer should follow these principles:
+
+make side-to-move obvious
+
+keep feedback immediate
+
+reward correct thinking
+
+help students notice patterns
+
+avoid repeating identical puzzles too often
+
+keep progress visible
+
+make it easy to resume later
+
+
+
+---
+
+Recommended Data Structure for Phase 4
+
+Student Object
+
+{
+  id: "stu_001",
+  firstName: "Jake",
+  lastInitial: "M",
+  displayName: "Jake M",
+  puzzlesAttempted: 0,
+  puzzlesCorrect: 0,
+  puzzlesIncorrect: 0,
+  puzzleScore: 0,
+  gamesPlayed: 0,
+  wins: 0,
+  losses: 0,
+  draws: 0,
+  lessonsCompleted: [],
+  currentLevel: 1,
+  usedPuzzleIds: []
+}
+
+Puzzle Object
+
+{
+  id: "pz_001",
+  title: "Fork the king and rook",
+  theme: "fork",
+  difficulty: 1,
+  sideToMove: "white",
+  position: "...",
+  solution: ["Qg5+"],
+  hints: [
+    "Look for a forcing move.",
+    "Checks are a good place to start.",
+    "The queen move creates a fork."
+  ],
+  explanation: "Qg5+ attacks the king and rook at the same time.",
+  feedbackCorrect: "Correct — this is a fork.",
+  feedbackIncorrect: "That move does not win material."
+}
+
+
+---
+
+UI Requirements for Phase 4
+
+At minimum the screen should include:
+
+student selector or student entry box
+
+current student display
+
+mode selector
+
+puzzle title/theme
+
+side-to-move indicator
+
+feedback box
+
+hint button
+
+next puzzle button
+
+score/progress panel
+
+
+Optional but strong:
+
+recent results strip
+
+badge or mastery indicator
+
+
+
+---
+
+Debug Requirements
+
+The debug layer should show:
+
+current student
+
+current puzzle ID
+
+puzzle solution
+
+whether answer checking is active
+
+hints used
+
+used puzzle count
+
+available puzzle count
+
+
+This is important because puzzle logic bugs can otherwise be hard to isolate.
+
+
+---
+
+Completion Standard for Phase 4
+
+Phase 4 is complete when:
+
+students can be added and selected
+
+each student has a persistent usable record
+
+puzzle mode works
+
+side to move is clearly displayed
+
+correct and incorrect answers are recognized
+
+hints work
+
+feedback appears immediately
+
+puzzle repetition is controlled
+
+scores and progress are tracked
+
+teacher can move between students and puzzles quickly
+
+
+
+---
+
+Best Modular Breakdown of 3 and 4
+
+Phase 3 modules
+
+1. Game state object
+
+
+2. Legal move validator
+
+
+3. Check/checkmate/stalemate engine
+
+
+4. Special move engine
+
+
+5. Move history + undo/reset
+
+
+6. Rule debug panel
+
+
+
+Phase 4 modules
+
+1. Student model
+
+
+2. Student manager
+
+
+3. Puzzle data model
+
+
+4. Puzzle loader / non-repeat engine
+
+
+5. Answer checker
+
+
+6. Hint + feedback engine
+
+
+7. Score tracker
+
+
+8. Teacher controls
+
+
+9. Progress dashboard
+
+
+
+
+---
+
+Strong recommendation
+
+Build these in this order:
+
+1. 3.1–3.3 turn state, legal moves, check
+
+
+2. 3.6–3.8 castling, en passant, promotion
+
+
+3. 3.4–3.10 mate/stalemate/history/undo
+
+
+4. 4.1–4.3 student records + puzzle structure
+
+
+5. 4.4–4.10 puzzle solving, hints, non-repeat, scoring
+
+
+6. 4.11–4.15 modes, reporting, teacher controls, polish
+
+
+
+If you want, I can turn this next into a developer handoff document with exact file/module names and implementation order.

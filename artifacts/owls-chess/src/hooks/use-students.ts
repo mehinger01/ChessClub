@@ -1,20 +1,19 @@
 import { useState, useEffect } from "react";
-import { storage, Student } from "../lib/storage";
+import { storage, Student, Puzzle } from "../lib/storage";
 
 export function useStudents() {
-  const [students, setStudents] = useState<Student[]>(storage.getStudents());
-  const [activeStudentId, setActiveStudentId] = useState<string | null>(storage.getActiveStudentId());
+  const [students, setStudents] = useState<Student[]>(() => storage.getStudents());
+  const [activeStudentId, setActiveStudentId] = useState<string | null>(() => storage.getActiveStudentId());
 
   useEffect(() => {
     const handleStorageChange = () => {
       setStudents(storage.getStudents());
       setActiveStudentId(storage.getActiveStudentId());
     };
-    
+
     window.addEventListener("storage", handleStorageChange);
-    // Custom event for same-window updates
     window.addEventListener("owls-storage", handleStorageChange);
-    
+
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       window.removeEventListener("owls-storage", handleStorageChange);
@@ -50,6 +49,27 @@ export function useStudents() {
     triggerUpdate();
   };
 
+  const recordPuzzleAttempt = (
+    puzzle: Puzzle,
+    opts: { correct: boolean; hintsUsed: number }
+  ) => {
+    if (!activeStudentId) return null;
+    const a = storage.recordPuzzleAttempt(activeStudentId, puzzle, opts);
+    triggerUpdate();
+    return a;
+  };
+
+  const recordGameResult = (result: "win" | "loss" | "draw") => {
+    if (!activeStudentId) return;
+    storage.recordGameResult(activeStudentId, result);
+    triggerUpdate();
+  };
+
+  const resetStudentSession = (id: string) => {
+    storage.resetStudentSession(id);
+    triggerUpdate();
+  };
+
   const activeStudent = students.find(s => s.id === activeStudentId) || null;
 
   return {
@@ -59,6 +79,9 @@ export function useStudents() {
     addStudent,
     deleteStudent,
     setActiveStudent,
-    triggerUpdate
+    recordPuzzleAttempt,
+    recordGameResult,
+    resetStudentSession,
+    triggerUpdate,
   };
 }
