@@ -1,0 +1,599 @@
+# SECTION A — FIRST MESSAGE TO AGENT
+## (Paste this entire block as your opening message)
+
+---
+
+Before you write a single line of code, read this entire message completely. This is a precision build and the order of operations matters.
+
+---
+
+## What You Are Building
+
+**ScholarForge Chess** — a browser-based classroom chess platform for high school chess clubs. It combines rules-correct chess gameplay with tactical training, student growth tracking, and teacher tools. It is deployed from a single link with no login required in Phase 1.
+
+This is not a hobby project. It will be used in a real classroom with real students. Every technical decision must reflect that.
+
+---
+
+## The Repository
+
+**GitHub:** mehinger01/ChessClub
+**Current state:** A working React + Vite + TypeScript app called "Owls Chess Club" already exists in this repo. It has a homepage, routing, a design system, and page shells for Play, Puzzles, Roster, and Admin. Some of it is worth keeping exactly as-is. Some of it needs to be replaced. Nothing gets deleted carelessly.
+
+---
+
+## The North Star Principle
+
+> "Does this feature help a student understand WHY their thinking was wrong — or does it only tell them THAT it was wrong?"
+
+Every feature decision at every phase must be evaluated against this question.
+
+---
+
+## The Three Non-Negotiables
+
+These are hard rules. They are not open for interpretation or "we'll add it later" decisions.
+
+**1. chess.js is the rules engine from move one.**
+No illegal moves can ever be made on this board. No temporary "we'll add validation later." chess.js drops in as a dependency in 5 minutes and handles all rules natively. A platform that allows illegal moves in a classroom loses its credibility permanently the first time a student slides a bishop through a piece in front of the class.
+
+**2. The homepage (home.tsx) does not get touched.**
+The existing homepage — Royal Blue hero, Playfair Display headline, owl logo, "Play Now" CTA — is the brand identity of Owls Chess Club. It stays exactly as-is throughout the entire Phase 1 build. Do not redesign it, do not refactor it, do not "improve" it.
+
+**3. Every data structure in Phase 1 must support the full 5-phase roadmap.**
+Do not build Phase 1-narrow data models that require refactoring in Phase 2. Specifically: the gameStore, studentStore, puzzle schema, and PGN metadata format must be shaped to accommodate Phase 2–5 requirements from day one. The full roadmap is in the blueprint below.
+
+---
+
+## The Full Product Vision — 5 Phases
+
+### Phase 1 — Core Board + Rules + Interaction Foundation (BUILD NOW)
+Deliver a stable, rules-correct, classroom-ready chess board with student identification, game recording, visual customization, and three lightweight teaching features.
+
+### Phase 2 — Puzzle Engine + Tactical Skill Tracking
+A spaced repetition puzzle system using the Lichess open puzzle database. Candidate move capture. Mistake taxonomy that classifies errors by cognitive type (vision / calculation / evaluation / knowledge gap / psychological) not just right/wrong.
+
+### Phase 3 — Student Profiles + Adaptive Training
+Full student performance profiles. Structured 4-step game review. Cross-game pattern detection. Claude API-generated coaching narratives per student.
+
+### Phase 4 — Teacher Dashboard + Broadcast Tools
+Teacher broadcast mode with live class heatmap showing which squares students click on a shared position. Teacher lesson authoring. Class-wide position challenges with timed submissions.
+
+### Phase 5 — Advanced Systems + Club Management
+Chess clock, Stockfish.js computer opponent, opening explorer, Chess960, user accounts, club Elo tracking, tournament brackets.
+
+---
+
+## What Already Exists — Keep These Exactly As-Is
+
+| File/Asset | Keep As-Is | Notes |
+|---|---|---|
+| `src/index.css` | YES — do not change | Append 8 board color vars only |
+| `src/main.tsx` | YES | No changes |
+| `src/App.tsx` | YES + add one route | Add `/settings` route only |
+| `src/components/layout.tsx` | YES + add gear icon | Minor addition only |
+| `src/components/ui/*` | YES — all of it | shadcn/ui components |
+| `src/pages/home.tsx` | YES — completely untouched | The brand identity |
+| `src/pages/not-found.tsx` | YES | No changes |
+| Font system | YES | Inter + Playfair Display + Space Mono |
+| Color palette | YES | Royal Blue primary, Parchment background |
+| Routing system | YES | Wouter — just add /settings |
+| shadcn/ui setup | YES | All components |
+| TanStack Query | YES | Already configured |
+
+---
+
+## What Gets Replaced
+
+| File | What Replaces It |
+|---|---|
+| Chess board/engine in `play.tsx` | chess.js + @dnd-kit full board system |
+| Any existing move validation | chess.js — non-negotiable |
+| Puzzle logic in `puzzles.tsx` | Lichess-compatible puzzle engine (Phase 2 — stub in Phase 1) |
+
+---
+
+## Step 1 — Repo Restructure
+
+The app is currently buried at `artifacts/owls-chess/`. Promote it to the root first before anything else.
+
+```bash
+# Run from repo root
+cp -r artifacts/owls-chess/* .
+cp -r artifacts/owls-chess/.[^.]* . 2>/dev/null || true
+rm -rf artifacts
+```
+
+Confirm the root now contains `src/`, `public/`, `index.html`, `package.json`, `vite.config.ts` before proceeding.
+
+---
+
+## Step 2 — Install Dependencies
+
+```bash
+pnpm add chess.js @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities zustand framer-motion idb-keyval
+pnpm add -D @types/chess.js vite-plugin-pwa
+```
+
+Do not reinstall anything already in package.json.
+
+---
+
+## Step 3 — Append Board Color Tokens to index.css
+
+Add ONLY these lines to the bottom of the `:root {}` block in `src/index.css`. Do not change any existing tokens:
+
+```css
+/* Board colors — ScholarForge Chess additions */
+--board-light: #F0D9B5;
+--board-dark: #B58863;
+--board-highlight-move: rgba(246, 246, 105, 0.6);
+--board-highlight-select: rgba(20, 85, 30, 0.5);
+--board-highlight-check: rgba(220, 50, 50, 0.6);
+--board-dot-legal: rgba(0, 0, 0, 0.2);
+--timer-instant: hsl(30 90% 55%);
+--timer-long: hsl(210 80% 55%);
+```
+
+---
+
+## Step 4 — Add /settings Route to App.tsx
+
+Add one import and one route. Touch nothing else in App.tsx:
+
+```tsx
+import Settings from "./pages/settings";
+// Add to Router:
+<Route path="/settings" component={Settings} />
+```
+
+---
+
+## Step 5 — Add Gear Icon to Layout
+
+In `src/components/layout.tsx`, add a settings link to the nav using the lucide-react Settings icon. Keep the existing nav structure.
+
+---
+
+## Step 6 — Build the Chess Engine Wrapper
+
+Create `src/engine/chessEngine.ts` — a typed wrapper around chess.js.
+
+Must expose:
+- `makeMove(from, to, promotion?)` → returns move result or null if illegal
+- `getLegalMoves(square)` → returns array of legal destination squares
+- `getBoardState()` → returns current FEN
+- `getHistory()` → returns SAN move array
+- `getFENHistory()` → returns FEN array (one per half-move — for O(1) rewind)
+- `isCheck()`, `isCheckmate()`, `isStalemate()`, `isDraw()`
+- `loadFEN(fen)` → sets position
+- `getPGN(white, black, event?)` → returns formatted PGN string
+- `reset()` → new game
+
+---
+
+## Step 7 — Build Zustand Stores
+
+### gameStore.ts
+```typescript
+interface GameState {
+  // Board
+  fen: string;
+  fenHistory: string[];          // Full FEN per half-move — O(1) rewind
+  moveHistory: string[];         // SAN notation array
+  currentMoveIndex: number;      // For notation navigation
+  selectedSquare: string | null;
+  legalMoves: string[];
+  lastMove: { from: string; to: string } | null;
+  isCheck: boolean;
+  isGameOver: boolean;
+  gameResult: string | null;
+
+  // Players
+  whitePlayer: string;
+  blackPlayer: string;
+  activeColor: 'w' | 'b';
+
+  // UI state
+  isFullscreen: boolean;
+  isBoardFlipped: boolean;
+  isReviewing: boolean;          // True when navigating history
+
+  // Teaching features
+  timesPerMove: number[];        // ms per half-move — thinking timer
+  openingViolations: OpeningViolation[];
+  annotations: Record<number, MoveAnnotation>; // moveIndex → annotation
+
+  // Game metadata
+  gameStartTime: number;
+  gameMode: 'casual' | 'tournament';
+}
+```
+
+### settingsStore.ts
+```typescript
+interface SettingsState {
+  pieceSet: string;              // 'cburnett' | 'merida' | 'alpha' | 'maestro' | 'custom'
+  customPieces: Record<string, string>; // pieceKey → blob URL
+  boardLight: string;
+  boardDark: string;
+  highlightMove: string;
+  highlightSelect: string;
+  highlightCheck: string;
+  dotLegal: string;
+  showCoordinates: boolean;
+  showLegalMoves: boolean;
+  autoQueen: boolean;
+  soundEnabled: boolean;
+  soundVolume: number;
+  darkMode: 'light' | 'dark' | 'system';
+  autoFlip: boolean;
+}
+```
+
+### studentStore.ts
+```typescript
+interface Student {
+  studentId: string;
+  firstName: string;
+  lastInitial: string;
+  displayName: string;
+  createdAt: string;
+  active: boolean;
+  // Phase 2+ fields — include in schema now, populate later
+  gamesPlayed: number;
+  puzzlesSolved: number;
+  skillProfile: Record<string, SkillData>;
+}
+
+interface StudentState {
+  students: Student[];
+  currentStudent: string | null;  // studentId
+  gameHistory: GameRecord[];      // Per student PGN records with metadata
+}
+
+interface GameRecord {
+  id: string;
+  studentId: string;
+  pgn: string;
+  white: string;
+  black: string;
+  result: string;
+  date: string;
+  moveCount: number;
+  duration: number;
+  timesPerMove: number[];         // Thinking timer data
+  openingViolations: OpeningViolation[];
+  annotations: Record<number, MoveAnnotation>;
+  // Phase 2+ — include in schema now
+  candidateMoves?: Record<number, string[]>;
+  errorClassifications?: Record<number, ErrorType>;
+}
+```
+
+---
+
+## Step 8 — Build Board Components
+
+### src/components/board/Square.tsx
+- Accepts: square notation, background color, highlight state, children
+- Highlight states: none / selected / legal-empty / legal-capture / last-move / check
+- Coordinate labels on rank 1 (files) and file a (ranks) when showCoordinates is true
+- Uses CSS custom properties from index.css for all colors
+
+### src/components/board/Piece.tsx
+- Draggable via @dnd-kit useDraggable
+- Loads piece image from `public/pieces/{pieceSet}/{pieceKey}.svg`
+- Falls back to Unicode glyph if image fails to load
+- Scale up + drop shadow on drag start (framer-motion)
+- Click handler for click-to-select fallback
+
+### src/components/board/Board.tsx
+- DndContext wrapper from @dnd-kit
+- 8×8 grid via CSS Grid
+- On piece drop: call chessEngine.makeMove() — if null (illegal), trigger snap-back animation
+- On piece select: call chessEngine.getLegalMoves() → highlight squares
+- Highlight layers: last move, selected, legal moves, check
+- Fullscreen sizing: `width: min(calc(100dvh - 160px), calc(100dvw - 32px))`
+- Board flip: renders ranks/files in reverse order
+- Promotion dialog: modal appears at destination square on pawn promotion
+
+---
+
+## Step 9 — Build Notation and Controls
+
+### src/components/notation/NotationPanel.tsx
+- Two-column SAN display: move number / White / Black
+- Current move highlighted
+- Click any move → navigate to that position (read-only replay)
+- Auto-scroll to latest move
+- Thinking timer color indicators on each move (orange < 5s, blue > 3min)
+- Collapses to horizontal scrolling bar in fullscreen mode
+
+### src/components/controls/PlayerBar.tsx
+- Player name display
+- Captured pieces display
+- Active player indicator (subtle pulse animation)
+- Elo placeholder field (cosmetic only in Phase 1)
+
+### src/components/controls/GameControls.tsx
+- Undo (casual mode only), Resign, Draw offer, New game
+- Flip board, Fullscreen toggle
+- All confirmation dialogs use shadcn AlertDialog
+
+---
+
+## Step 10 — Assemble play.tsx
+
+Keep the page shell and URL. Replace internals with assembled board components. Layout:
+
+```
+Desktop: Board (center) + NotationPanel (right sidebar)
+Mobile: Board (full width) + NotationPanel (bottom drawer)
+Fullscreen: Board (fills screen) + NotationPanel (bottom overlay bar)
+```
+
+Pre-game dialog (shadcn Dialog) collects: white player name, black player name, color choice, game mode (casual/tournament). Connects to studentStore for student selector.
+
+---
+
+## Step 11 — Build settings.tsx (New Page)
+
+Full-page route at `/settings`. Back button returns to `/play` with game state preserved.
+
+Sections:
+1. **Piece Set** — chips for cburnett/merida/alpha/maestro/custom + 12-slot upload grid + live mini board preview
+2. **Board Colors** — 6 named theme swatches + individual color pickers for all 8 board color tokens + live mini board preview
+3. **Custom Board Image** — upload zone, PNG/SVG/WebP
+4. **Interface** — toggles: dark mode, coordinates, legal hints, auto-queen, sound, auto-flip
+
+All changes write to settingsStore instantly. No save button. Mini board previews update live.
+
+Piece upload validation:
+- Max 512KB per file
+- Min 64×64px, max 512×512px
+- PNG alpha channel warning if no transparency
+- SVG sanitization (strip script tags)
+- Store in IndexedDB via idb-keyval
+
+---
+
+## Step 12 — Extend roster.tsx
+
+Add to existing page:
+- Student list with add/edit/deactivate
+- Student selector component (reused in play.tsx pre-game dialog)
+- Game history per student — list of saved games with PGN download
+- All data persists via studentStore + localStorage
+
+---
+
+## Step 13 — Game End Flow
+
+On checkmate/stalemate/resignation/draw:
+1. Board locks
+2. Modal (shadcn Dialog): result, move count, duration, opening violations summary
+3. Options: Save PGN (download file), Copy PGN, Review Game, New Game
+4. PGN headers auto-populated: [White], [Black], [Date], [Result], [Event "ScholarForge Chess"], [Site "Owls Chess Club"]
+5. Game saved to studentStore.gameHistory if a student is selected
+
+---
+
+## Step 14 — Three Phase 1 Teaching Features
+
+### openingPrinciples.ts
+Pure function. Takes SAN move history array. Returns violations array. Called after game ends, not during play.
+
+Checks first 10 moves for:
+- Same piece moved twice before all minor pieces developed
+- Queen developed before move 6 with undeveloped pieces
+- King uncastled after move 10 with open center
+
+Returns: `{ moveIndex: number, violation: string, explanation: string }[]`
+
+Display in game-end modal and review mode as inline notation annotations.
+
+### thinkingTimer.ts
+Records `Date.now()` delta between moves. Stored as `timesPerMove: number[]` in gameStore. No UI during play. Surfaced in review mode:
+- Under 5000ms → orange indicator on move in notation panel
+- Over 180000ms → blue indicator on move in notation panel
+
+### Post-Game Annotation Fields
+In game review mode, after game ends, for the 3 moves with longest think times:
+- Three textarea questions per position:
+  1. "What were you trying to do here?"
+  2. "What were you worried about?"
+  3. "Looking at it now, what do you think went wrong?"
+- Student answers saved before any engine/principle analysis is shown
+- Stored in GameRecord.annotations
+
+---
+
+## Step 15 — Add Piece Sets to public/
+
+Download these 4 piece sets from the lichess CDN and commit to the repo. Do not load them from CDN at runtime — bundle them for offline/PWA use.
+
+```
+public/pieces/cburnett/  (wK wQ wR wB wN wP bK bQ bR bB bN bP — all .svg)
+public/pieces/merida/
+public/pieces/alpha/
+public/pieces/maestro/
+```
+
+Source: `https://cdn.jsdelivr.net/gh/lichess-org/lila@master/public/piece/{setname}/{pieceKey}.svg`
+
+Default piece set: cburnett.
+
+---
+
+## Step 16 — PWA Setup
+
+Add `vite-plugin-pwa` to vite.config.ts:
+- Service worker caches all piece SVGs, sounds, and app shell
+- App is fully functional offline after first load
+- Installable to home screen
+- Manifest: name "ScholarForge Chess", short_name "Chess", theme_color matches `--primary`
+
+---
+
+## Step 17 — Add Sound Effects
+
+Add to `public/sounds/`:
+- `move.ogg` — piece placement
+- `capture.ogg` — piece capture
+- `check.ogg` — check
+- `end.ogg` — game over
+
+Use Web Audio API. Play sounds on: any move, capture (louder), check, game end. Respect `settingsStore.soundEnabled` and `settingsStore.soundVolume`.
+
+---
+
+## Puzzle System — Phase 2 Architecture (Build the Schema Now)
+
+**Do not build the puzzle UI in Phase 1. Do build the schema and data format now so Phase 2 slots in cleanly.**
+
+The puzzle system uses the **Lichess open puzzle database** (database.lichess.org). Every puzzle schema decision must be compatible with Lichess CSV format.
+
+### Puzzle Schema (finalize now, build in Phase 2)
+```typescript
+interface Puzzle {
+  puzzleId: string;        // From Lichess PuzzleId
+  fen: string;             // Position FEN — required for board setup
+  solution: string[];      // SAN array — multi-move, NOT a single string
+  difficulty: 1 | 2 | 3 | 4 | 5;  // Mapped from Lichess Rating
+  skillTags: SkillTag[];   // Mapped from Lichess Themes
+  errorType: ErrorType;    // vision/calculation/evaluation/knowledge_gap/psychological
+  title: string;
+  hints: string[];
+  explanation: string;
+  source: 'lichess' | 'custom';
+  lichessRating?: number;
+  lichessPopularity?: number;
+}
+```
+
+### Lichess Theme → ScholarForge SkillTag mapping (hardcode this)
+```
+fork → forks
+pin → pins
+skewer → skewers
+discoveredAttack → discovered_attacks
+doubleCheck → double_checks
+deflection → deflections
+decoy → decoys
+backRankMate → back_rank_threats
+mateIn1/mateIn2/mateIn3 → checkmate_patterns
+endgame → endgame_basics
+opening → opening_principles
+```
+
+### Admin Import Tool (Phase 2 — spec the UI slot now)
+The `/admin` page needs an "Import Puzzles" section placeholder in Phase 1:
+- Upload Lichess CSV
+- Filter by theme, rating range (recommend 1000–1800), popularity (recommend > 75)
+- Preview first 10 rows
+- Confirm import with progress bar
+- Storage: `public/puzzles/{skillTag}.json` per category in Phase 2
+
+---
+
+## Mistake Taxonomy (Phase 2 — define the enum now)
+
+```typescript
+type ErrorType =
+  | 'vision'          // Didn't see the piece/square/threat
+  | 'calculation'     // Saw it but miscounted moves
+  | 'evaluation'      // Calculated correctly, assessed position wrong
+  | 'knowledge_gap'   // Pattern never seen before
+  | 'psychological';  // Time pressure, fear, overconfidence
+```
+
+Include this type in the shared types file now even though it's only used in Phase 2+.
+
+---
+
+## Full Skill Tag Taxonomy (define the full enum now)
+
+```typescript
+type SkillTag =
+  // Tactical
+  | 'forks' | 'pins' | 'skewers' | 'discovered_attacks' | 'double_checks'
+  | 'deflections' | 'decoys' | 'interference' | 'clearance'
+  | 'back_rank_threats' | 'checkmate_patterns'
+  // Calculation
+  | 'forcing_moves' | 'candidate_evaluation' | 'move_counting' | 'defensive_calculation'
+  // Vision
+  | 'board_vision' | 'coordinate_training' | 'piece_awareness'
+  | 'threat_detection' | 'checks' | 'captures'
+  // Positional
+  | 'center_control' | 'piece_activity' | 'open_files' | 'weak_squares' | 'pawn_structure'
+  // Opening
+  | 'center_occupation' | 'piece_development' | 'king_safety' | 'tempo'
+  // Endgame
+  | 'king_activation' | 'pawn_endgames' | 'rook_endgames' | 'opposition';
+```
+
+---
+
+## Build Sprint Order — Follow Exactly
+
+| # | Task | Do Not Start Until |
+|---|---|---|
+| 1 | Repo restructure | Nothing |
+| 2 | Install dependencies | Step 1 done |
+| 3 | Append board color tokens to index.css | Step 1 done |
+| 4 | Add /settings route to App.tsx | Step 1 done |
+| 5 | Add gear icon to layout.tsx | Step 1 done |
+| 6 | Create shared types file (src/types/index.ts) | Step 1 done |
+| 7 | chessEngine.ts | Steps 1–6 done |
+| 8 | gameStore.ts | Step 7 done |
+| 9 | settingsStore.ts | Steps 1–6 done |
+| 10 | studentStore.ts | Steps 1–6 done |
+| 11 | Square.tsx | Step 8 done |
+| 12 | Piece.tsx | Step 11 done |
+| 13 | Board.tsx | Step 12 done |
+| 14 | NotationPanel.tsx | Step 8 done |
+| 15 | PlayerBar.tsx | Step 8 done |
+| 16 | GameControls.tsx | Steps 8–9 done |
+| 17 | Assemble play.tsx | Steps 13–16 done |
+| 18 | PieceUploader.tsx + ColorPicker.tsx | Step 9 done |
+| 19 | Assemble settings.tsx | Step 18 done |
+| 20 | Extend roster.tsx | Step 10 done |
+| 21 | Game-end modal + PGN save | Step 17 done |
+| 22 | openingPrinciples.ts | Step 7 done |
+| 23 | thinkingTimer.ts | Step 8 done |
+| 24 | Post-game annotation fields | Steps 21–23 done |
+| 25 | Download piece sets to public/pieces/ | Any time |
+| 26 | Add sound files to public/sounds/ | Any time |
+| 27 | PWA setup | Step 17 done |
+| 28 | End-to-end test: full game → save PGN → resume | All steps done |
+
+**After each numbered step: pause, tell me what you did, confirm it works, then proceed to the next step.**
+
+---
+
+## Performance Targets
+
+| Metric | Target |
+|---|---|
+| Initial load (Chromebook) | Under 3 seconds |
+| Move response (drag drop) | Under 16ms — 60fps |
+| Board resize | No layout shift, no jitter |
+| Offline after first load | Full functionality via service worker |
+
+---
+
+## Now — Before You Start
+
+Read everything above. Then tell me:
+
+1. What you understand this project to be in 3 sentences
+2. What files in the existing codebase you are keeping completely unchanged
+3. What the first 5 build steps are in order
+4. Any conflicts, missing information, or questions before you begin
+
+**Do not write any code until I confirm your understanding is correct.**
+
+---
+
+---

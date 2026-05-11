@@ -1,0 +1,177 @@
+We need a focused Phase 5A upgrade for the chess app. Preserve the current UI and gameplay unless specifically modified below. Do NOT rebuild the app architecture. Keep this as a safe incremental upgrade.
+
+========================================
+PHASE 5A — QUICK UPGRADES
+========================================
+
+1. Banner Logo Upgrade
+----------------------------------------
+- Add support for a new student-designed logo file:
+  public/assets/ohs-chess-logo.png
+
+- Replace the small graphic currently displayed before the “Owl Chess” title with this logo.
+
+- Preserve the existing Owl Chess branding/theme/colors.
+
+- The logo must:
+  - scale responsively
+  - maintain aspect ratio
+  - never stretch/distort
+  - display well on desktop and mobile
+
+- Keep the UI clean and modern.
+
+========================================
+2. Fix Game-Over Move History Bug
+========================================
+Current bug:
+- When a player wins, part of the move history disappears/reset unexpectedly.
+
+Required behavior:
+- Move history must remain fully intact after:
+  - checkmate
+  - stalemate
+  - draw
+  - resignation (future)
+  - timeout (future)
+
+- Preserve:
+  - full move list
+  - final board position
+  - game result
+  - side to move
+  - PGN data
+
+- Do NOT clear history until the user explicitly clicks New Game.
+
+========================================
+3. Undo Button Improvements
+========================================
+- Allow Undo to go all the way back to the initial starting position.
+
+- Undo should work:
+  - during active games
+  - after checkmate/game-over
+
+- Each undo should properly restore:
+  - board state
+  - turn
+  - castling rights
+  - en passant state
+  - check/checkmate state
+  - move history
+
+- Undo should ONLY remove the move being undone.
+
+- Disable Undo only when already at the starting position.
+
+- New Game remains the only full reset action.
+
+========================================
+4. PGN Copy + Download Tools
+========================================
+Add two controls near move history:
+
+- Copy PGN
+- Download PGN
+
+Copy PGN:
+- Copies full PGN to clipboard.
+
+Download PGN:
+- Downloads a .pgn file.
+
+Filename example:
+- ohs-chess-game-2026-05-07.pgn
+
+PGN export must include:
+- Event
+- Site
+- Date
+- Result
+- Full move list
+
+Default values:
+[Event "OHS Chess Club"]
+[Site "Owl Chess"]
+
+========================================
+5. Internal Player Tracking + Privacy
+========================================
+IMPORTANT:
+Track players internally but DO NOT expose names in exports.
+
+Internal game state/archive should support:
+- gameId
+- timestamp
+- whitePlayerId
+- blackPlayerId
+- optional display names
+- result
+- move history
+- PGN
+
+However:
+
+PGN exports must NOT include student/player names.
+
+Exports should default to:
+[White "White"]
+[Black "Black"]
+
+Structure the code so:
+- internal tracking exists
+- exports remain anonymized by default
+
+This is important for school/student privacy.
+
+========================================
+6. Completed Game Preservation
+========================================
+When a game ends:
+- preserve final board state
+- preserve move history
+- preserve result
+- preserve exportability
+
+Add a completedGame object/state if needed.
+
+Do NOT automatically reset the board after a win.
+
+========================================
+7. Local Archive Foundation (Simple)
+========================================
+Add a lightweight local archive system using browser localStorage.
+
+Store completed games with:
+- gameId
+- timestamp
+- result
+- anonymized PGN
+- move count
+
+Add a simple archive panel or modal with:
+- View Game
+- Copy PGN
+- Download PGN
+- Delete Archive Entry
+
+IMPORTANT:
+- Keep this local-only for now.
+- No accounts/logins.
+- No cloud database yet.
+
+========================================
+IMPORTANT DEVELOPMENT RULES
+========================================
+- Do NOT redesign the entire app.
+- Do NOT rebuild the board logic unnecessarily.
+- Preserve existing styling where possible.
+- Keep changes modular and incremental.
+- Keep the app classroom-friendly and lightweight.
+- Prioritize stability over adding flashy features.
+
+After implementation:
+- summarize files changed
+- summarize bugs fixed
+- summarize any future recommendations

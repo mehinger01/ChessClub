@@ -5,15 +5,20 @@ import { Input } from "../components/ui/input";
 import { Card } from "../components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
-import { UserPlus, Trash2, Download, Users, RefreshCcw } from "lucide-react";
+import { UserPlus, Trash2, Download, Users, RefreshCcw, History } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { StudentGamesDialog } from "../components/roster/StudentGamesDialog";
+import type { Student } from "../types";
+import { useStudentStore } from "../stores/studentStore";
 
 export default function Roster() {
   const { students, addStudent, deleteStudent, activeStudentId, resetStudentSession } = useStudents();
+  const listGameRecords = useStudentStore(s => s.listGameRecords);
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastInitial, setLastInitial] = useState("");
+  const [gamesFor, setGamesFor] = useState<Student | null>(null);
 
   const handleAdd = (e: React.FormEvent) => {
     e.preventDefault();
@@ -197,6 +202,23 @@ export default function Roster() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => setGamesFor(student)}
+                          className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                          title="View saved games"
+                          data-testid={`button-games-${student.id}`}
+                        >
+                          <History className="w-4 h-4" />
+                          <span className="sr-only">View games</span>
+                          {(() => {
+                            const n = listGameRecords(student.id).length;
+                            return n > 0 ? (
+                              <span className="ml-0.5 text-[10px] font-bold tabular-nums" aria-label={`${n} games`}>{n}</span>
+                            ) : null;
+                          })()}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handleResetSession(student.id, student.displayName)}
                           className="text-muted-foreground hover:text-primary hover:bg-primary/10"
                           title="Reset session puzzles"
@@ -222,6 +244,12 @@ export default function Roster() {
           </div>
         )}
       </Card>
+
+      <StudentGamesDialog
+        student={gamesFor}
+        open={!!gamesFor}
+        onOpenChange={open => { if (!open) setGamesFor(null); }}
+      />
     </div>
   );
 }

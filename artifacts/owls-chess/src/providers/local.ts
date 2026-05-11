@@ -36,6 +36,33 @@ export const DEFAULT_SETTINGS: AppSettings = {
     customPieceUploads: false,
     leaderboardEnabled: true,
   },
+  uiPreferences: {
+    pieceSetId: "cburnett",
+    customPieceKeys: [],
+    boardLight: "",
+    boardDark: "",
+    borderColor: "",
+    highlightMove: "",
+    highlightSelect: "",
+    highlightCheck: "",
+    dotLegal: "",
+    threatHighlight: "",
+    customBoardImageKey: null,
+    watermarkOpacity: 0.30,
+    showCoordinates: true,
+    showLegalMoves: true,
+    autoQueen: false,
+    soundEnabled: true,
+    soundVolume: 0.6,
+    darkMode: "system",
+    autoFlip: false,
+    noviceMode: false,
+    classFocusTags: [],
+    coordinateColor: "",
+    coordinateOpacity: 0.9,
+    coordinateFontSize: 11,
+    coordinatePosition: "inside",
+  },
 };
 
 export function loadSettings(): AppSettings {
@@ -43,7 +70,12 @@ export function loadSettings(): AppSettings {
     const raw = localStorage.getItem(SETTINGS_KEY);
     if (!raw) return { ...DEFAULT_SETTINGS };
     const parsed = JSON.parse(raw);
-    return { ...DEFAULT_SETTINGS, ...parsed, featureFlags: { ...DEFAULT_SETTINGS.featureFlags, ...(parsed.featureFlags ?? {}) } };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...parsed,
+      featureFlags: { ...DEFAULT_SETTINGS.featureFlags, ...(parsed.featureFlags ?? {}) },
+      uiPreferences: { ...DEFAULT_SETTINGS.uiPreferences, ...(parsed.uiPreferences ?? {}) },
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }

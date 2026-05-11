@@ -1,10 +1,20 @@
 export interface BoardTheme {
   id: string;
   name: string;
-  lightSquare: string;
-  darkSquare: string;
-  highlightColor: string;
+  lightSquare: string;           // default light-square CSS color (hex)
+  darkSquare: string;            // default dark-square CSS color (hex)
+  highlightColor: string;        // default last-move / selection highlight (rgba)
   description: string;
+  /**
+   * Optional absolute path (served from public/) to a PNG/SVG that appears as
+   * a centered, semi-transparent watermark OVER the board squares. Opacity is
+   * controlled by UIPreferences.watermarkOpacity (default 0.12).
+   *
+   * This is NOT a full-board background image — the app always generates all
+   * squares, borders, and coordinates. The image floats above the grid with
+   * pointer-events: none so gameplay is never affected.
+   */
+  watermarkImage?: string;
 }
 
 export const BOARD_THEMES: BoardTheme[] = [
@@ -15,6 +25,15 @@ export const BOARD_THEMES: BoardTheme[] = [
     darkSquare: "#1a365d",
     highlightColor: "rgba(255, 235, 100, 0.4)",
     description: "The classic Owls colors — royal blue and parchment.",
+  },
+  {
+    id: "owl-board",
+    name: "Owl Board",
+    lightSquare: "#f1f5f9",
+    darkSquare: "#1a365d",
+    highlightColor: "rgba(255, 235, 100, 0.4)",
+    description: "Royal Owl colors with the school owl as a subtle board watermark.",
+    watermarkImage: "/assets/boards/owl-board.png?v=6",
   },
   {
     id: "forest",

@@ -32,7 +32,12 @@ export function getProviders(): ProviderRegistry {
 
 export function updateSettings(patch: Partial<AppSettings>) {
   const current = loadSettings();
-  const next = { ...current, ...patch, featureFlags: { ...current.featureFlags, ...(patch.featureFlags ?? {}) } };
+  const next = {
+    ...current,
+    ...patch,
+    featureFlags: { ...current.featureFlags, ...(patch.featureFlags ?? {}) },
+    uiPreferences: { ...current.uiPreferences, ...(patch.uiPreferences ?? {}) },
+  };
   // Restricted mode safety: force allowExternalCalls off and local providers
   if (next.deploymentMode === "restricted") {
     next.allowExternalCalls = false;

@@ -1,3 +1,12 @@
+// Lightweight per-skill performance record. Kept inline (no cross-file import)
+// to avoid circular dependencies between lib/storage and types/index.
+export interface StoredSkillData {
+  attempts: number;
+  solved: number;
+  rating: number;       // simple rating, defaults to 1200
+  lastSeen?: string;    // ISO timestamp
+}
+
 export interface Student {
   id: string;
   firstName: string;
@@ -16,6 +25,11 @@ export interface Student {
   usedPuzzleIds: string[];
   notes?: string;
   lastActive: number;
+  // ScholarForge Phase 2+ additive fields. Optional so legacy persisted data
+  // stays valid; defaulted in migrateStudent below so reads see consistent shape.
+  createdAt?: string;                                    // ISO
+  active?: boolean;                                      // soft-deactivate flag
+  skillProfile?: Record<string, StoredSkillData>;        // SkillTag → record
 }
 
 export interface PuzzleAttempt {
@@ -69,7 +83,44 @@ function migrateStudent(raw: any): Student {
     usedPuzzleIds: raw.usedPuzzleIds ?? [],
     notes: raw.notes,
     lastActive: raw.lastActive ?? Date.now(),
+    createdAt: raw.createdAt ?? new Date(raw.lastActive ?? Date.now()).toISOString(),
+    active: raw.active ?? true,
+    skillProfile: raw.skillProfile ?? {},
   };
+}
+
+// ─── Game records (ScholarForge Phase 1+) ──────────────────────────────────
+// Persisted PGN history per student. fenHistory is intentionally NOT persisted —
+// it's rebuilt from PGN on review to keep localStorage flat as game count grows.
+export interface StoredGameRecord {
+  id: string;
+  studentId: string;
+  pgn: string;
+  white: string;
+  black: string;
+  result: string;             // "1-0" | "0-1" | "1/2-1/2" | "*"
+  date: string;               // ISO
+  moveCount: number;
+  duration: number;           // ms total
+  timesPerMove: number[];
+  openingViolations: { moveIndex: number; violation: string; explanation: string }[];
+  annotations: Record<number, unknown>;
+}
+
+const GAME_RECORDS_KEY = "owls_game_records_v1";
+
+function readGameRecords(): Record<string, StoredGameRecord[]> {
+  try {
+    const raw = localStorage.getItem(GAME_RECORDS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeGameRecords(map: Record<string, StoredGameRecord[]>) {
+  localStorage.setItem(GAME_RECORDS_KEY, JSON.stringify(map));
+  window.dispatchEvent(new Event("owls-storage"));
 }
 
 function recomputeLevel(s: Student): number {
@@ -222,6 +273,26 @@ export const storage = {
 
   resetStudentSession: (studentId: string) => {
     storage.updateStudent(studentId, s => ({ ...s, usedPuzzleIds: [] }));
+  },
+
+  // ─── Game record CRUD ───────────────────────────────────────────────────
+  listGameRecords: (studentId: string): StoredGameRecord[] => {
+    const all = readGameRecords();
+    return all[studentId] ?? [];
+  },
+
+  saveGameRecord: (record: StoredGameRecord) => {
+    const all = readGameRecords();
+    const list = all[record.studentId] ?? [];
+    all[record.studentId] = [...list, record];
+    writeGameRecords(all);
+  },
+
+  deleteGameRecord: (studentId: string, recordId: string) => {
+    const all = readGameRecords();
+    const list = all[studentId] ?? [];
+    all[studentId] = list.filter(r => r.id !== recordId);
+    writeGameRecords(all);
   },
 
   getTopSolvers: (limit = 3): Student[] => {

@@ -2,8 +2,12 @@ import { Link, useLocation } from "wouter";
 import { useStudents } from "../hooks/use-students";
 import { Button } from "./ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import logo from "../assets/logo.png";
-import { BookOpen, Users, Play, Settings } from "lucide-react";
+import fallbackLogo from "../assets/logo.png";
+import { BookOpen, Users, Play, Settings, Shield } from "lucide-react";
+
+// Primary logo: public/assets/ohs-chess-logo.png (user-replaceable, no bundling).
+// Falls back to the bundled src/assets/logo.png if the file hasn't been placed yet.
+const PRIMARY_LOGO_URL = `${import.meta.env.BASE_URL}assets/ohs-chess-logo.png`;
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
@@ -15,12 +19,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <div className="container mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-[1.02]">
-              <div className="w-10 h-10 rounded-full overflow-hidden bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <img src={logo} alt="Owls Chess Club" className="w-full h-full object-cover" />
-              </div>
-              <span className="font-serif font-bold text-xl tracking-tight text-primary">
-                Owls Chess
-              </span>
+              {/* Logo: responsive, aspect-ratio preserved, never circle-cropped.
+                  Falls back to bundled logo if public/assets/ohs-chess-logo.png is absent. */}
+              <img
+                src={PRIMARY_LOGO_URL}
+                alt="Owls Chess Club"
+                className="h-10 w-auto object-contain"
+                style={{ maxWidth: "10rem" }}
+                onError={(e) => {
+                  const img = e.currentTarget as HTMLImageElement;
+                  if (img.src !== fallbackLogo) img.src = fallbackLogo;
+                }}
+              />
             </Link>
             
             <nav className="hidden md:flex items-center gap-1">
@@ -33,8 +43,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <NavButton href="/roster" active={location === "/roster"} icon={<Users className="w-4 h-4 mr-2" />}>
                 Roster
               </NavButton>
-              <NavButton href="/admin" active={location === "/admin"} icon={<Settings className="w-4 h-4 mr-2" />}>
+              <NavButton href="/admin" active={location === "/admin"} icon={<Shield className="w-4 h-4 mr-2" />}>
                 Admin
+              </NavButton>
+              <NavButton href="/settings" active={location === "/settings"} icon={<Settings className="w-4 h-4 mr-2" />}>
+                Settings
               </NavButton>
             </nav>
           </div>
@@ -65,7 +78,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/roster"><Users className="w-5 h-5 text-primary" /></Link>
               </Button>
               <Button variant="ghost" size="icon" asChild>
-                <Link href="/admin"><Settings className="w-5 h-5 text-primary" /></Link>
+                <Link href="/admin"><Shield className="w-5 h-5 text-primary" /></Link>
+              </Button>
+              <Button variant="ghost" size="icon" asChild>
+                <Link href="/settings"><Settings className="w-5 h-5 text-primary" /></Link>
               </Button>
             </nav>
           </div>
@@ -79,7 +95,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <footer className="border-t border-border bg-card py-8 mt-auto">
         <div className="container mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
           <p>Owls Chess Club &copy; {new Date().getFullYear()}. Academic excellence through chess.</p>
-          <p className="mt-1 opacity-70">Custom owl pieces coming soon.</p>
         </div>
       </footer>
     </div>

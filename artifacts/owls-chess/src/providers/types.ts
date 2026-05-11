@@ -6,6 +6,52 @@ import type { Student, PuzzleAttempt, Puzzle } from "../lib/storage";
 
 export type DeploymentMode = "hosted" | "school" | "restricted";
 
+// ScholarForge UI preferences. Stored alongside deployment settings so they
+// flow through the existing updateSettings() audit log and provider write path.
+// Custom piece blobs and custom board image live in IndexedDB (idb-keyval),
+// NOT here — only their reference keys are kept in this object.
+export interface UIPreferences {
+  // Piece set
+  pieceSetId: string;              // "cburnett" | "merida" | "alpha" | "maestro" | "custom" | <legacy id>
+  customPieceKeys: PieceKey[];     // which piece slots have custom uploads in IndexedDB
+  // Board square colors — CSS color strings. Empty string = use the active theme default.
+  boardLight: string;
+  boardDark: string;
+  // Board border color. Empty string = no border.
+  borderColor: string;
+  // Highlight colors — CSS rgba strings. Empty string = use built-in default.
+  highlightMove: string;           // last-move squares
+  highlightSelect: string;         // selected-square highlight
+  highlightCheck: string;          // king-in-check square
+  dotLegal: string;                // legal-move dot colour
+  threatHighlight: string;         // threat squares (novice mode)
+  // Custom board image (IndexedDB key) — kept for potential future use
+  customBoardImageKey: string | null;
+  // Watermark
+  watermarkOpacity: number;        // 0..1, default 0.12 — for themes with a watermarkImage
+  // Interface toggles
+  showCoordinates: boolean;
+  showLegalMoves: boolean;
+  autoQueen: boolean;
+  soundEnabled: boolean;
+  soundVolume: number;             // 0..1
+  darkMode: "light" | "dark" | "system";
+  autoFlip: boolean;
+  // Learning mode
+  noviceMode: boolean;           // beginner aids: piece name tooltips, move tips, threat indicators
+  // Class focus — skill tags the teacher has prioritised for this class session
+  classFocusTags: string[];      // subset of SKILL_CATEGORIES tags; empty = no filter active
+  // Coordinate appearance
+  coordinateColor: string;         // CSS color, "" = auto (contrasts with dark square)
+  coordinateOpacity: number;       // 0..1, default 0.9
+  coordinateFontSize: number;      // px, 8-16, default 11
+  coordinatePosition: "inside" | "outside"; // default "inside"
+}
+
+export type PieceKey =
+  | "wP" | "wN" | "wB" | "wR" | "wQ" | "wK"
+  | "bP" | "bN" | "bB" | "bR" | "bQ" | "bK";
+
 export interface AppSettings {
   schoolId: string;
   deploymentMode: DeploymentMode;
@@ -22,6 +68,7 @@ export interface AppSettings {
     customPieceUploads: boolean;
     leaderboardEnabled: boolean;
   };
+  uiPreferences: UIPreferences;
 }
 
 export interface AuditLogEntry {

@@ -6,7 +6,7 @@ import { Switch } from "../components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { ScrollArea } from "../components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "../components/ui/alert";
-import { Download, Upload, Trash2, Shield, Database, Palette, FileJson, AlertTriangle, RefreshCw } from "lucide-react";
+import { Download, Upload, Trash2, Shield, Database, Palette, FileJson, AlertTriangle, RefreshCw, BookOpen } from "lucide-react";
 import { toast } from "sonner";
 import { useSettings } from "../hooks/use-settings";
 import { getProviders } from "../providers";
@@ -28,7 +28,7 @@ import {
 } from "../lib/custom-assets";
 import { puzzles as bundledPuzzles } from "../data/puzzles";
 import { clearImportedLibrary } from "../providers/local";
-import type { AuditLogEntry } from "../providers/types";
+import type { AuditLogEntry, AppSettings } from "../providers/types";
 import { formatDistanceToNow } from "date-fns";
 
 export default function Admin() {
@@ -287,6 +287,9 @@ export default function Admin() {
           <FlagRow label="Leaderboard" hint="Show 'Top Solvers' on the home page." value={settings.featureFlags.leaderboardEnabled} onChange={(v) => update({ featureFlags: { ...settings.featureFlags, leaderboardEnabled: v } })} />
         </CardContent>
       </Card>
+
+      {/* Class Focus */}
+      <ClassFocusCard settings={settings} update={update} />
 
       {/* Data import / export */}
       <Card>
@@ -580,5 +583,146 @@ function FlagRow({ label, hint, value, onChange, disabled }: { label: string; hi
       </div>
       <Switch checked={value} disabled={disabled} onCheckedChange={onChange} />
     </div>
+  );
+}
+
+const SKILL_CATEGORIES: { label: string; tags: string[] }[] = [
+  {
+    label: "Tactical Patterns",
+    tags: ["forks", "pins", "skewers", "discovered_attacks", "double_checks", "deflections", "decoys", "interference", "clearance", "back_rank_threats", "checkmate_patterns"],
+  },
+  {
+    label: "Calculation",
+    tags: ["forcing_moves", "candidate_evaluation", "move_counting", "defensive_calculation"],
+  },
+  {
+    label: "Vision",
+    tags: ["board_vision", "coordinate_training", "piece_awareness", "threat_detection", "checks", "captures"],
+  },
+  {
+    label: "Positional",
+    tags: ["center_control", "piece_activity", "open_files", "weak_squares", "pawn_structure"],
+  },
+  {
+    label: "Opening Principles",
+    tags: ["center_occupation", "piece_development", "king_safety", "tempo"],
+  },
+  {
+    label: "Endgame",
+    tags: ["king_activation", "pawn_endgames", "rook_endgames", "opposition"],
+  },
+];
+
+function ClassFocusCard({ settings, update }: { settings: AppSettings; update: (patch: Partial<AppSettings>) => void }) {
+  const saved: string[] = settings.uiPreferences.classFocusTags ?? [];
+  const [draft, setDraft] = useState<string[]>(saved);
+
+  const toggle = (tag: string) =>
+    setDraft(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+
+  const selectAll = (tags: string[]) =>
+    setDraft(prev => [...new Set([...prev, ...tags])]);
+
+  const clearCol = (tags: string[]) =>
+    setDraft(prev => prev.filter(t => !tags.includes(t)));
+
+  const isDirty =
+    JSON.stringify([...draft].sort()) !== JSON.stringify([...saved].sort());
+
+  const handleSave = () => {
+    update({ uiPreferences: { ...settings.uiPreferences, classFocusTags: draft } });
+    toast.success(
+      draft.length === 0
+        ? "Class focus cleared — all puzzles eligible"
+        : `Class focus saved — ${draft.length} tag${draft.length !== 1 ? "s" : ""} active`
+    );
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 font-serif">
+          <BookOpen className="w-5 h-5 text-primary" /> Class Focus
+        </CardTitle>
+        <CardDescription>
+          Select the skill tags to emphasise this session. Puzzles matching these tags will be
+          prioritised in the puzzle queue.{" "}
+          {saved.length === 0
+            ? "No filter active — all puzzles are eligible."
+            : `${saved.length} tag${saved.length !== 1 ? "s" : ""} currently active.`}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
+          {SKILL_CATEGORIES.map(({ label, tags }) => {
+            const allSelected = tags.every(t => draft.includes(t));
+            const noneSelected = tags.every(t => !draft.includes(t));
+            return (
+              <div
+                key={label}
+                className="rounded-xl border border-border/60 p-3 bg-muted/20 flex flex-col gap-2"
+              >
+                <div className="flex items-start justify-between gap-1">
+                  <span className="text-sm font-semibold text-foreground leading-tight">{label}</span>
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      onClick={() => selectAll(tags)}
+                      disabled={allSelected}
+                      className="text-xs text-primary hover:underline disabled:opacity-30 disabled:no-underline leading-none"
+                    >
+                      All
+                    </button>
+                    <span className="text-xs text-muted-foreground leading-none">/</span>
+                    <button
+                      onClick={() => clearCol(tags)}
+                      disabled={noneSelected}
+                      className="text-xs text-primary hover:underline disabled:opacity-30 disabled:no-underline leading-none"
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  {tags.map(tag => (
+                    <label key={tag} className="flex items-center gap-2 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={draft.includes(tag)}
+                        onChange={() => toggle(tag)}
+                        className="w-3.5 h-3.5 accent-primary cursor-pointer shrink-0"
+                      />
+                      <span className="text-xs font-mono text-muted-foreground group-hover:text-foreground transition-colors">
+                        {tag}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3 pt-1">
+          <Button onClick={handleSave} disabled={!isDirty}>
+            Save Class Focus
+          </Button>
+          {draft.length > 0 && (
+            <Button
+              variant="ghost"
+              onClick={() => setDraft([])}
+              className="text-muted-foreground"
+            >
+              Clear all
+            </Button>
+          )}
+          <span className="text-sm text-muted-foreground ml-auto">
+            {draft.length === 0
+              ? "No filter — all puzzles eligible"
+              : `${draft.length} tag${draft.length !== 1 ? "s" : ""} selected`}
+            {isDirty && " · unsaved"}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

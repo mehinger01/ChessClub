@@ -1,5 +1,6 @@
 import type { CSSProperties, ReactElement } from "react";
 import { listCustomPieceSets, PIECE_KEYS } from "./custom-assets";
+import { useSettingsStore } from "../stores/settingsStore";
 
 export interface PieceSet {
   id: string;
@@ -70,6 +71,45 @@ function makeLetterPieces() {
   return pieces;
 }
 
+/**
+ * Build piece components from the in-memory customPieceUrls map (object: URLs).
+ * Reads from the store synchronously at call time so the board always reflects
+ * the latest uploaded images without needing a remount.
+ */
+function makeCustomPieces() {
+  const urls = useSettingsStore.getState().customPieceUrls;
+  const pieces: Record<string, (props: { squareWidth: number }) => ReactElement> = {};
+  for (const key of PIECE_KEYS) {
+    const url = urls[key];
+    const capturedKey = key;
+    pieces[capturedKey] = ({ squareWidth }) =>
+      url ? (
+        <img
+          src={url}
+          alt={capturedKey}
+          onError={(e) => { (e.currentTarget as HTMLImageElement).style.visibility = "hidden"; }}
+          style={{ width: squareWidth * 0.92, height: squareWidth * 0.92, display: "block", margin: "auto", pointerEvents: "none" }}
+        />
+      ) : (
+        <span
+          style={{
+            fontSize: squareWidth * 0.3,
+            fontWeight: 700,
+            display: "block",
+            textAlign: "center",
+            lineHeight: `${squareWidth}px`,
+            opacity: 0.35,
+            fontFamily: "Georgia, serif",
+            pointerEvents: "none",
+          }}
+        >
+          {capturedKey}
+        </span>
+      );
+  }
+  return pieces;
+}
+
 export const PIECE_SETS: PieceSet[] = [
   {
     id: "classic",
@@ -82,6 +122,12 @@ export const PIECE_SETS: PieceSet[] = [
     name: "Letters",
     description: "Letter-based pieces — always available, ideal for printing or low bandwidth.",
     customPieces: makeLetterPieces,
+  },
+  {
+    id: "custom",
+    name: "Custom",
+    description: "Your own uploaded SVG or PNG for each of the 12 piece slots.",
+    customPieces: makeCustomPieces,
   },
 ];
 

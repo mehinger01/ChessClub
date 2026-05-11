@@ -1,76 +1,35 @@
-import { useState, useEffect } from "react";
-import { storage, Student, Puzzle } from "../lib/storage";
+/**
+ * Compatibility wrapper over the new studentStore. Existing consumers
+ * (layout.tsx, roster.tsx, admin.tsx, puzzles.tsx) keep their import path
+ * and API surface unchanged. All read/write goes through one source of truth.
+ */
+import { useStudentStore } from "../stores/studentStore";
+import type { Puzzle } from "../lib/storage";
 
 export function useStudents() {
-  const [students, setStudents] = useState<Student[]>(() => storage.getStudents());
-  const [activeStudentId, setActiveStudentId] = useState<string | null>(() => storage.getActiveStudentId());
+  const students = useStudentStore(s => s.students);
+  const activeStudentId = useStudentStore(s => s.activeStudentId);
+  const addStudent = useStudentStore(s => s.addStudent);
+  const deleteStudent = useStudentStore(s => s.deleteStudent);
+  const setActiveStudent = useStudentStore(s => s.setActiveStudent);
+  const recordPuzzleAttemptRaw = useStudentStore(s => s.recordPuzzleAttempt);
+  const recordGameResult = useStudentStore(s => s.recordGameResult);
+  const resetStudentSession = useStudentStore(s => s.resetStudentSession);
+  const refresh = useStudentStore(s => s.refreshFromStorage);
 
-  useEffect(() => {
-    const handleStorageChange = () => {
-      setStudents(storage.getStudents());
-      setActiveStudentId(storage.getActiveStudentId());
-    };
+  const activeStudent = students.find(s => s.id === activeStudentId) || null;
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("owls-storage", handleStorageChange);
-
-    return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("owls-storage", handleStorageChange);
-    };
-  }, []);
-
-  const triggerUpdate = () => {
-    setStudents(storage.getStudents());
-    window.dispatchEvent(new Event("owls-storage"));
-  };
-
-  const addStudent = (firstName: string, lastInitial: string) => {
-    const newStudent = storage.addStudent(firstName, lastInitial);
-    if (!activeStudentId) {
-      storage.setActiveStudentId(newStudent.id);
-      setActiveStudentId(newStudent.id);
-    }
-    triggerUpdate();
-    return newStudent;
-  };
-
-  const deleteStudent = (id: string) => {
-    storage.deleteStudent(id);
-    if (activeStudentId === id) {
-      setActiveStudentId(null);
-    }
-    triggerUpdate();
-  };
-
-  const setActiveStudent = (id: string | null) => {
-    storage.setActiveStudentId(id);
-    setActiveStudentId(id);
-    triggerUpdate();
-  };
-
+  // Preserve legacy signature: returns the attempt record (or null) like before.
+  // The new store doesn't return the attempt; we re-fetch from storage if a caller
+  // ever needs it. Today no caller relies on the return value.
   const recordPuzzleAttempt = (
     puzzle: Puzzle,
     opts: { correct: boolean; hintsUsed: number }
   ) => {
     if (!activeStudentId) return null;
-    const a = storage.recordPuzzleAttempt(activeStudentId, puzzle, opts);
-    triggerUpdate();
-    return a;
+    recordPuzzleAttemptRaw(puzzle, opts);
+    return null;
   };
-
-  const recordGameResult = (result: "win" | "loss" | "draw") => {
-    if (!activeStudentId) return;
-    storage.recordGameResult(activeStudentId, result);
-    triggerUpdate();
-  };
-
-  const resetStudentSession = (id: string) => {
-    storage.resetStudentSession(id);
-    triggerUpdate();
-  };
-
-  const activeStudent = students.find(s => s.id === activeStudentId) || null;
 
   return {
     students,
@@ -82,6 +41,6 @@ export function useStudents() {
     recordPuzzleAttempt,
     recordGameResult,
     resetStudentSession,
-    triggerUpdate,
+    triggerUpdate: refresh,
   };
 }

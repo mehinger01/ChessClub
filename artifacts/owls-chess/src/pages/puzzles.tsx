@@ -6,6 +6,7 @@ import { useSettings } from "../hooks/use-settings";
 import { usePuzzleLibrary } from "../hooks/use-puzzle-library";
 import { getTheme } from "../lib/themes";
 import { getPieceSet } from "../lib/piece-sets";
+import { BoardCoords } from "../components/game/BoardCoords";
 import { getProviders } from "../providers";
 import { PUZZLE_THEMES } from "../data/puzzles";
 import type { Puzzle } from "../lib/storage";
@@ -268,8 +269,23 @@ export default function Puzzles() {
     toast.success("Session puzzles reset for " + activeStudent.displayName);
   };
 
-  const darkColor = theme.darkSquare;
-  const lightColor = theme.lightSquare;
+  const ui = settings.uiPreferences;
+  const darkColor  = ui.boardDark  || theme.darkSquare;
+  const lightColor = ui.boardLight || theme.lightSquare;
+  const checkHighlight  = ui.highlightCheck || "rgba(239,68,68,0.45)";
+
+  // Watermark
+  const watermarkImage   = theme.watermarkImage ?? null;
+  const watermarkOpacity = ui.watermarkOpacity ?? 0.12;
+  const [watermarkFailed, setWatermarkFailed] = useState(false);
+  useEffect(() => { setWatermarkFailed(false); }, [watermarkImage]);
+
+  // Coordinate appearance
+  const coordPosition = ui.coordinatePosition ?? "inside";
+  const coordColor    = ui.coordinateColor    || "#94a3b8";
+  const coordOpacity  = ui.coordinateOpacity  ?? 0.9;
+  const coordFontSize = ui.coordinateFontSize ?? 11;
+  const coordsOutside = ui.showCoordinates && coordPosition === "outside";
 
   // King-in-check highlight
   const checkSquares = useMemo(() => {
@@ -282,12 +298,12 @@ export default function Puzzles() {
         if (sq && sq.type === "k" && sq.color === turn) {
           const file = "abcdefgh"[c];
           const rank = 8 - r;
-          return { [`${file}${rank}`]: { background: "rgba(239, 68, 68, 0.45)" } };
+          return { [`${file}${rank}`]: { background: checkHighlight } };
         }
       }
     }
     return {};
-  }, [game]);
+  }, [game, checkHighlight]);
 
   const usedCount = activeStudent?.usedPuzzleIds.length ?? 0;
   const availableCount = library.length - usedCount;
@@ -399,20 +415,69 @@ export default function Puzzles() {
               Puzzle {queueIndex + 1} of {queue.length || 1}
             </span>
           </div>
-          <div className="w-full aspect-square mx-auto" style={{ maxWidth: "min(560px, calc(100vh - 220px))" }}>
-            <Chessboard
-              id="PuzzleBoard"
-              position={fen}
-              onPieceDrop={onDrop}
-              onSquareClick={onSquareClick}
-              boardOrientation={currentPuzzle.sideToMove}
-              customDarkSquareStyle={{ backgroundColor: darkColor }}
-              customLightSquareStyle={{ backgroundColor: lightColor }}
-              customPieces={customPieces}
-              customSquareStyles={{ ...checkSquares, ...optionSquares, ...moveSquares }}
-              animationDuration={200}
-              arePiecesDraggable={puzzleState === "playing" && game.turn() === sideChar}
-            />
+          {/* Board outer wrapper — padding for outside coords */}
+          <div
+            style={{
+              position: "relative",
+              maxWidth: "min(560px, calc(100vh - 220px))",
+              width: "100%",
+              paddingLeft: coordsOutside ? `${coordFontSize * 2}px` : undefined,
+              paddingBottom: coordsOutside ? `${coordFontSize * 2}px` : undefined,
+            }}
+          >
+            <div
+              className="w-full aspect-square"
+              style={{
+                position: "relative",
+                overflow: coordsOutside ? "visible" : "hidden",
+              }}
+            >
+              <Chessboard
+                id="PuzzleBoard"
+                position={fen}
+                onPieceDrop={onDrop}
+                onSquareClick={onSquareClick}
+                boardOrientation={currentPuzzle.sideToMove}
+                customDarkSquareStyle={{ backgroundColor: darkColor }}
+                customLightSquareStyle={{ backgroundColor: lightColor }}
+                customPieces={customPieces}
+                customSquareStyles={{ ...checkSquares, ...optionSquares, ...moveSquares }}
+                animationDuration={200}
+                showBoardNotation={false}
+                arePiecesDraggable={puzzleState === "playing" && game.turn() === sideChar}
+              />
+              {/* Watermark overlay */}
+              {watermarkImage && !watermarkFailed && (
+                <div
+                  className="absolute inset-0 flex items-center justify-center pointer-events-none"
+                  style={{ zIndex: 2 }}
+                >
+                  <img
+                    src={watermarkImage}
+                    alt=""
+                    aria-hidden="true"
+                    onError={() => setWatermarkFailed(true)}
+                    style={{
+                      width: "25%",
+                      height: "25%",
+                      objectFit: "contain",
+                      opacity: watermarkOpacity,
+                      userSelect: "none",
+                      pointerEvents: "none",
+                    }}
+                  />
+                </div>
+              )}
+              {/* Custom coordinate labels */}
+              <BoardCoords
+                orientation={currentPuzzle.sideToMove}
+                position={coordPosition}
+                color={coordColor}
+                opacity={coordOpacity}
+                fontSize={coordFontSize}
+                show={ui.showCoordinates}
+              />
+            </div>
           </div>
         </div>
 

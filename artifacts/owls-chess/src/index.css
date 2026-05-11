@@ -124,6 +124,16 @@
   --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+
+  /* Board colors — ScholarForge Chess additions */
+  --board-light: #F0D9B5;
+  --board-dark: #B58863;
+  --board-highlight-move: rgba(246, 246, 105, 0.6);
+  --board-highlight-select: rgba(20, 85, 30, 0.5);
+  --board-highlight-check: rgba(220, 50, 50, 0.6);
+  --board-dot-legal: rgba(0, 0, 0, 0.2);
+  --timer-instant: hsl(30 90% 55%);
+  --timer-long: hsl(210 80% 55%);
 }
 
 .dark {
