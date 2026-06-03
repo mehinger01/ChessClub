@@ -52,23 +52,36 @@ The long-term goal is to become a complete chess improvement platform rather tha
 - Import history
 - Review tools
 
+## Firebase Foundation
+- Firebase project created
+- Firebase Authentication enabled
+- Cloud Firestore enabled
+- Replit Secrets configured
+- Firebase SDK installed
+- Lazy Firebase initialization added
+- Firebase diagnostics panel added
+- Firestore read/write connection verified
+- localStorage remains the default provider
+
 ---
 
 # Current Sprint
 
-## Firebase Foundation
+## Student Account Foundation
 
 Goals:
-- Firebase Authentication
-- Firestore setup
-- Repository layer
-- Feature flags
-- Maintain localStorage compatibility
+- Finalize Email Access Policy
+- Add student signup/login flow
+- Create Firebase-backed student profiles
+- Keep localStorage as the default provider until Firebase is explicitly enabled
+- Avoid moving puzzle/game data until authentication is stable
 
 Success Criteria:
-- Firebase connected
-- Existing features unchanged
-- No student-facing changes yet
+- Admin can choose school-only or any-email access
+- oscodaschools.org is configured as the default school domain
+- A student can create an account and log in
+- A student profile is created in Firestore
+- Existing puzzle and game functionality remains unchanged
 
 ---
 
@@ -95,12 +108,24 @@ Status: Mostly Complete
 
 # Phase 3 - Firebase + Student Accounts
 
-Status: Starting
+Status: In Progress
+
+### Completed
+- Firebase project created
+- Firebase Authentication enabled
+- Cloud Firestore enabled
+- Replit Secrets configured
+- Firebase SDK installed
+- Lazy Firebase initialization added
+- Firebase diagnostics panel added
+- Firestore read/write connection verified
 
 ### Authentication
 - Student login
 - Teacher login
 - Admin login
+- Email Access Policy
+- Allowed domain management
 
 ### Student Profiles
 - Rating
@@ -248,6 +273,7 @@ Explain mistakes, best moves, and tactical opportunities in student-friendly lan
 - Complete Firebase migration plan
 - Separate storage layer from UI
 - Improve theme validation
+- Add Firebase security rules before student rollout
 
 ## Medium Priority
 - API import monitoring
