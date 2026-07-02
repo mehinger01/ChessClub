@@ -1,0 +1,54 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSchoolUser() {
+      return signedIn()
+        && request.auth.token.email is string
+        && request.auth.token.email.matches('.*@oscodaschools\\.org$');
+    }
+
+    function isOwner(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    // User profile records: users can read/write only their own profile.
+    match /users/{userId} {
+      allow read, create, update: if isOwner(userId);
+      allow delete: if false;
+    }
+
+    // Puzzle bank: signed-in school users can read puzzles; clients cannot edit the bank.
+    match /puzzles/{puzzleId} {
+      allow read: if isSchoolUser();
+      allow write: if false;
+    }
+
+    // Puzzle attempts: students may create and read only their own attempts.
+    match /puzzleAttempts/{attemptId} {
+      allow create: if isSchoolUser()
+        && request.resource.data.authUserId == request.auth.uid;
+
+      allow read: if isSchoolUser()
+        && resource.data.authUserId == request.auth.uid;
+
+      allow update, delete: if false;
+    }
+
+    // Roster records: readable by signed-in school users; not client-editable.
+    match /roster/{studentId} {
+      allow read: if isSchoolUser();
+      allow write: if false;
+    }
+
+    // Default deny for all other collections and documents.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
