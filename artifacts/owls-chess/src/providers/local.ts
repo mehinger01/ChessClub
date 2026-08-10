@@ -130,14 +130,18 @@ export const localStorageProvider: StorageProvider = {
     try { return JSON.parse(raw); } catch { return null; }
   },
   async exportData() {
+    const importedPuzzleLibrary = readImportedLibrary();
     return {
-      version: 1,
+      version: 2,
       exportedAt: new Date().toISOString(),
       students: localStorageEngine.getStudents(),
       attempts: localStorageEngine.getAttempts(),
       settings: loadSettings(),
       audit: readAudit(),
       activeStudentId: localStorageEngine.getActiveStudentId(),
+      // Preserve the imported puzzle bank in full backups. null means this
+      // installation is using the bundled library shipped with the app.
+      puzzleLibrary: importedPuzzleLibrary,
     };
   },
   async importData(payload) {
@@ -148,6 +152,28 @@ export const localStorageProvider: StorageProvider = {
     if (p.settings && typeof p.settings === "object") saveSettings({ ...DEFAULT_SETTINGS, ...p.settings });
     if (Array.isArray(p.audit)) writeAudit(p.audit);
     if (typeof p.activeStudentId === "string") localStorage.setItem("owls_active_student", p.activeStudentId);
+
+    // Backward compatible: backups created before version 2 do not contain
+    // puzzleLibrary, so restoring one leaves the current puzzle bank alone.
+    if (Object.prototype.hasOwnProperty.call(p, "puzzleLibrary")) {
+      if (p.puzzleLibrary === null) {
+        clearImportedLibrary();
+      } else if (Array.isArray(p.puzzleLibrary)) {
+        const errors: string[] = [];
+        for (let i = 0; i < p.puzzleLibrary.length; i++) {
+          for (const error of validatePuzzleShape(p.puzzleLibrary[i])) {
+            errors.push(`puzzleLibrary[${i}]: ${error}`);
+          }
+        }
+        if (errors.length > 0) {
+          throw new Error(`Invalid puzzle library in backup: ${errors[0]}`);
+        }
+        writeImportedLibrary(p.puzzleLibrary as Puzzle[]);
+      } else {
+        throw new Error("Invalid puzzle library in backup: expected an array or null");
+      }
+    }
+
     window.dispatchEvent(new Event("owls-storage"));
   },
 };
