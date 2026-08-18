@@ -1,15 +1,20 @@
+import { useEffect, useState } from "react";
 import { Link } from "wouter";
 import { useStudents } from "../hooks/use-students";
 import { storage } from "../lib/storage";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Play, BookOpen, Users, Trophy, ChevronRight } from "lucide-react";
-import logo from "../assets/logo.png";
 import { motion } from "framer-motion";
+import { getBrandProfile, loadBrandProfileId, subscribeToBrandChange } from "../lib/branding";
 
 export default function Home() {
   const { students } = useStudents();
   const topSolvers = storage.getTopSolvers(3);
+  const [brandId, setBrandId] = useState(() => loadBrandProfileId());
+  const brand = getBrandProfile(brandId);
+
+  useEffect(() => subscribeToBrandChange(() => setBrandId(loadBrandProfileId())), []);
 
   return (
     <div className="flex-1 flex flex-col">
@@ -17,23 +22,26 @@ export default function Home() {
       <section className="relative py-24 md:py-32 overflow-hidden bg-primary text-primary-foreground">
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay"></div>
         <div className="absolute inset-0 bg-gradient-to-b from-primary/50 to-primary pointer-events-none"></div>
-        
+
         <div className="container mx-auto max-w-6xl px-4 relative z-10">
           <div className="flex flex-col md:flex-row items-center gap-12">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
               className="flex-1 text-center md:text-left"
             >
+              <p className="text-sm md:text-base uppercase tracking-[0.25em] font-semibold text-secondary mb-4">
+                {brand.schoolName}
+              </p>
               <h1 className="text-5xl md:text-7xl font-serif font-bold tracking-tight mb-6 leading-tight">
                 Master the <br/><span className="text-secondary">Royal Game</span>.
               </h1>
               <p className="text-xl text-primary-foreground/80 mb-8 max-w-2xl mx-auto md:mx-0 font-sans leading-relaxed">
-                Welcome to the Owls Chess Club. We combine academic rigor with fierce competition. 
+                Welcome to the {brand.clubName}. We combine academic rigor with fierce competition.
                 Whether you're learning the rules or studying grandmaster tactics, your board awaits.
               </p>
-              
+
               <div className="flex flex-col sm:flex-row items-center gap-4 justify-center md:justify-start">
                 <Button size="lg" className="w-full sm:w-auto bg-secondary text-secondary-foreground hover:bg-secondary/90 text-lg px-8 h-14 rounded-xl shadow-lg transition-transform hover:-translate-y-1" asChild>
                   <Link href="/play">
@@ -47,15 +55,15 @@ export default function Home() {
                 </Button>
               </div>
             </motion.div>
-            
-            <motion.div 
+
+            <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.8, delay: 0.2 }}
               className="flex-1 w-full max-w-md md:max-w-full"
             >
-              <div className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl border border-primary-foreground/20 bg-primary/50 p-2 transform rotate-3 hover:rotate-0 transition-transform duration-500">
-                <img src={logo} alt="Owls Chess Club Logo" className="w-full h-full object-cover rounded-xl bg-background" />
+              <div className="relative aspect-square rounded-2xl overflow-hidden shadow-2xl border border-primary-foreground/20 bg-primary/50 p-5 transform rotate-3 hover:rotate-0 transition-transform duration-500">
+                <img src={brand.logoUrl} alt={brand.logoAlt} className="w-full h-full object-contain rounded-xl bg-background" />
               </div>
             </motion.div>
           </div>
