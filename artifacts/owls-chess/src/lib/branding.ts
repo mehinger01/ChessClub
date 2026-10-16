@@ -38,7 +38,7 @@ export const BRAND_PROFILES: Record<BrandProfileId, BrandProfile> = {
     schoolName: "Ogemaw Heights High School",
     clubName: "Falcons Chess Club",
     mascot: "Falcons",
-    logoUrl: `${import.meta.env.BASE_URL}assets/ohhs-falcon-chess-logo.svg`,
+    logoUrl: `${import.meta.env.BASE_URL}assets/ohhs-falcon-chess-logo.webp`,
     logoAlt: "Ogemaw Heights Falcons Chess Club",
     footerText: "Falcons Chess Club",
     documentTitle: "Ogemaw Heights Falcons Chess Club",
