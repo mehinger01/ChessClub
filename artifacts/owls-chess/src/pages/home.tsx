@@ -6,7 +6,6 @@ import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import {
   ArrowRight,
-  BookOpen,
   CalendarDays,
   Gamepad2,
   Medal,
@@ -31,8 +30,6 @@ export default function Home() {
   const { students } = useStudents();
   const [brandId, setBrandId] = useState(() => loadBrandProfileId());
   const brand = getBrandProfile(brandId);
-  const isFalcon = brand.id === "falcons";
-
   useEffect(() => subscribeToBrandChange(() => setBrandId(loadBrandProfileId())), []);
 
   const topSolvers = storage.getTopSolvers(5);
@@ -83,7 +80,7 @@ export default function Home() {
   }, [students]);
 
   return (
-    <div className={`flex-1 ${isFalcon ? "bg-background" : "bg-background"}`}>
+    <div className="flex-1 bg-background">
       <section className="container mx-auto max-w-7xl px-4 py-6 md:py-8">
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
           <motion.div
@@ -103,7 +100,7 @@ export default function Home() {
                 </div>
 
                 <h1 className="font-serif text-4xl font-black uppercase leading-[0.96] tracking-tight md:text-5xl lg:text-6xl">
-                  <span className="block text-foreground">Ogemaw Heights</span>
+                  <span className="block text-foreground">{brand.schoolName.replace(" High School", "")}</span>
                   <span className="mt-2 block text-secondary">{brand.clubName}</span>
                 </h1>
 
