@@ -18,6 +18,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { students, activeStudentId, setActiveStudent } = useStudents();
   const [brandId, setBrandId] = useState<BrandProfileId>(() => loadBrandProfileId());
   const brand = getBrandProfile(brandId);
+  const isFalcon = brand.id === "falcons";
 
   useEffect(() => {
     applyBrandProfile(brand);
@@ -33,79 +34,74 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <header className="border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
-        <div className="container mx-auto max-w-6xl px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-6">
-            <Link href="/" className="flex items-center gap-3 group transition-transform hover:scale-[1.02]">
+      <header className={`sticky top-0 z-50 border-b border-border backdrop-blur-md ${isFalcon ? "bg-background/95" : "bg-card/90"}`}>
+        <div className="container mx-auto max-w-7xl px-4 min-h-20 flex items-center justify-between gap-5">
+          <div className="flex min-w-0 items-center gap-8">
+            <Link href="/" className="flex min-w-0 items-center gap-3 group">
               <img
                 src={brand.logoUrl}
                 alt={brand.logoAlt}
-                className="h-11 w-auto object-contain"
-                style={{ maxWidth: "11rem" }}
+                className="h-14 w-14 shrink-0 object-contain transition-transform group-hover:scale-105"
               />
+              <div className="hidden sm:block min-w-0 leading-none">
+                <div className={`truncate font-serif text-lg font-black uppercase tracking-[0.08em] ${isFalcon ? "text-secondary" : "text-primary"}`}>
+                  {brand.schoolName.replace(" High School", "")}
+                </div>
+                <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.32em] text-muted-foreground">
+                  {brand.clubName}
+                </div>
+              </div>
             </Link>
 
-            <nav className="hidden md:flex items-center gap-1">
-              <NavButton href="/play" active={location === "/play"} icon={<Play className="w-4 h-4 mr-2" />}>
+            <nav className="hidden lg:flex items-stretch self-stretch">
+              <NavButton href="/play" active={location === "/play"} icon={<Play className="h-4 w-4" />} falcon={isFalcon}>
                 Free Play
               </NavButton>
-              <NavButton href="/puzzles" active={location === "/puzzles"} icon={<BookOpen className="w-4 h-4 mr-2" />}>
+              <NavButton href="/puzzles" active={location === "/puzzles"} icon={<BookOpen className="h-4 w-4" />} falcon={isFalcon}>
                 Puzzles
               </NavButton>
-              <NavButton href="/roster" active={location === "/roster"} icon={<Users className="w-4 h-4 mr-2" />}>
+              <NavButton href="/roster" active={location === "/roster"} icon={<Users className="h-4 w-4" />} falcon={isFalcon}>
                 Roster
               </NavButton>
-              <NavButton href="/admin" active={location === "/admin"} icon={<Shield className="w-4 h-4 mr-2" />}>
+              <NavButton href="/admin" active={location === "/admin"} icon={<Shield className="h-4 w-4" />} falcon={isFalcon}>
                 Admin
               </NavButton>
-              <NavButton href="/settings" active={location === "/settings"} icon={<Settings className="w-4 h-4 mr-2" />}>
+              <NavButton href="/settings" active={location === "/settings"} icon={<Settings className="h-4 w-4" />} falcon={isFalcon}>
                 Settings
               </NavButton>
             </nav>
           </div>
 
-          <div className="flex items-center gap-4">
-            <div className="w-48">
+          <div className="flex items-center gap-3">
+            <div className="hidden w-48 md:block">
               <Select value={activeStudentId || "none"} onValueChange={(v) => setActiveStudent(v === "none" ? null : v)}>
-                <SelectTrigger className="bg-background">
+                <SelectTrigger className="border-border bg-card/60">
                   <SelectValue placeholder="Select student..." />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">No student selected</SelectItem>
-                  {students.map(s => (
-                    <SelectItem key={s.id} value={s.id}>{s.displayName}</SelectItem>
+                  {students.map((student) => (
+                    <SelectItem key={student.id} value={student.id}>{student.displayName}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <nav className="md:hidden flex items-center gap-2">
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/play"><Play className="w-5 h-5 text-primary" /></Link>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/puzzles"><BookOpen className="w-5 h-5 text-primary" /></Link>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/roster"><Users className="w-5 h-5 text-primary" /></Link>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/admin"><Shield className="w-5 h-5 text-primary" /></Link>
-              </Button>
-              <Button variant="ghost" size="icon" asChild>
-                <Link href="/settings"><Settings className="w-5 h-5 text-primary" /></Link>
-              </Button>
+            <nav className="lg:hidden flex items-center gap-1">
+              <Button variant="ghost" size="icon" asChild><Link href="/play" aria-label="Free Play"><Play className="h-5 w-5" /></Link></Button>
+              <Button variant="ghost" size="icon" asChild><Link href="/puzzles" aria-label="Puzzles"><BookOpen className="h-5 w-5" /></Link></Button>
+              <Button variant="ghost" size="icon" asChild><Link href="/admin" aria-label="Admin"><Shield className="h-5 w-5" /></Link></Button>
             </nav>
           </div>
         </div>
       </header>
 
-      {location === "/admin" && (
+      {location === "/admin" ? (
         <section className="border-b border-border bg-muted/30">
           <div className="container mx-auto max-w-5xl px-4 py-4">
             <div className="rounded-xl border border-border bg-card p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-start gap-3">
-                <div className="rounded-lg bg-primary/10 p-2 text-primary">
+                <div className="rounded-lg bg-secondary/10 p-2 text-secondary">
                   <Palette className="w-5 h-5" />
                 </div>
                 <div>
@@ -129,33 +125,50 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </div>
           </div>
         </section>
-      )}
+      ) : null}
 
-      <main className="flex-1 flex flex-col">
-        {children}
-      </main>
+      <main className="flex-1 flex flex-col">{children}</main>
 
-      <footer className="border-t border-border bg-card py-8 mt-auto">
-        <div className="container mx-auto max-w-6xl px-4 text-center text-sm text-muted-foreground">
-          <p>{brand.footerText} &copy; {new Date().getFullYear()}. Academic excellence through chess.</p>
-          <p className="mt-1 text-xs">{brand.schoolName}</p>
+      <footer className={`border-t border-border py-7 mt-auto ${isFalcon ? "bg-card" : "bg-card"}`}>
+        <div className="container mx-auto max-w-7xl px-4 flex flex-col gap-2 text-center md:flex-row md:items-center md:justify-between md:text-left">
+          <div>
+            <div className={`font-serif font-bold ${isFalcon ? "text-secondary" : "text-primary"}`}>{brand.schoolName}</div>
+            <div className="text-xs text-muted-foreground">{brand.footerText} · Academic excellence through chess.</div>
+          </div>
+          <div className="text-xs text-muted-foreground">© {new Date().getFullYear()} {brand.clubName}</div>
         </div>
       </footer>
     </div>
   );
 }
 
-function NavButton({ href, active, children, icon }: { href: string; active: boolean; children: React.ReactNode; icon: React.ReactNode }) {
+function NavButton({
+  href,
+  active,
+  children,
+  icon,
+  falcon,
+}: {
+  href: string;
+  active: boolean;
+  children: React.ReactNode;
+  icon: React.ReactNode;
+  falcon: boolean;
+}) {
   return (
-    <Button
-      variant={active ? "secondary" : "ghost"}
-      className={`font-medium ${active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:text-foreground"}`}
-      asChild
+    <Link
+      href={href}
+      className={`relative flex items-center gap-2 px-4 text-sm font-medium transition-colors ${
+        active
+          ? falcon
+            ? "text-secondary"
+            : "text-primary"
+          : "text-muted-foreground hover:text-foreground"
+      }`}
     >
-      <Link href={href}>
-        {icon}
-        {children}
-      </Link>
-    </Button>
+      {icon}
+      {children}
+      {active ? <span className={`absolute inset-x-3 bottom-0 h-0.5 ${falcon ? "bg-secondary" : "bg-primary"}`} /> : null}
+    </Link>
   );
 }
