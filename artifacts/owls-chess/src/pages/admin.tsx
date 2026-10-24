@@ -70,24 +70,32 @@ export default function Admin() {
     getProviders().puzzleSource.loadLibrary().then(lib => setPuzzleLibSize(lib.length));
   }, [settings.puzzleSourceProviderId]);
 
+  const [backupBusy, setBackupBusy] = useState(false);
   const handleExport = async () => {
-    const data = await getProviders().storage.exportData();
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `owls-chess-backup-${new Date().toISOString().split("T")[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-    getProviders().audit.log({ actorUserId: "local-admin", actionType: "data.exported", targetType: "system" });
-    toast.success("Backup downloaded");
+    if (backupBusy) return;
+    setBackupBusy(true);
+    try {
+      const data = await getProviders().storage.exportData();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `owls-chess-backup-${new Date().toISOString().split("T")[0]}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      getProviders().audit.log({ actorUserId: "local-admin", actionType: "data.exported", targetType: "system" });
+      toast.success("Backup downloaded");
+    } catch (error) {
+      toast.error("Backup failed: " + (error as Error).message);
+    } finally { setBackupBusy(false); }
   };
 
   const handleImportClick = () => fileInputRef.current?.click();
 
   const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
-    if (!f) return;
+    if (!f || backupBusy) return;
+    setBackupBusy(true);
     try {
       const text = await f.text();
       const json = JSON.parse(text);
@@ -98,6 +106,7 @@ export default function Admin() {
     } catch (err) {
       toast.error("Import failed: " + (err as Error).message);
     } finally {
+      setBackupBusy(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
@@ -299,10 +308,10 @@ export default function Admin() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid sm:grid-cols-2 gap-3">
-            <Button variant="outline" onClick={handleExport}>
+            <Button variant="outline" disabled={backupBusy} onClick={handleExport}>
               <Download className="w-4 h-4 mr-2" /> Export full backup (JSON)
             </Button>
-            <Button variant="outline" onClick={handleImportClick}>
+            <Button variant="outline" disabled={backupBusy} onClick={handleImportClick}>
               <Upload className="w-4 h-4 mr-2" /> Import backup (JSON)
             </Button>
             <input ref={fileInputRef} type="file" accept="application/json" onChange={handleImport} className="hidden" />

@@ -27,6 +27,7 @@ export interface GameStartOptions {
   whitePlayer: string;
   blackPlayer: string;
   mode?: GameMode;
+  studentColor?: "w" | "b";
   studentId?: string | null;       // student playing (for game-end save)
   flipForBlack?: boolean;
 }
@@ -61,6 +62,7 @@ interface GameState {
   whitePlayer: string;
   blackPlayer: string;
   activeColor: "w" | "b";
+  studentColor: "w" | "b" | null;
   studentId: string | null;        // student bound to this game (for save)
 
   // UI
@@ -75,6 +77,7 @@ interface GameState {
   lastMoveAt: number;              // ms timestamp of last commit (for thinking timer)
 
   // Game metadata
+  gameId: string | null;
   gameStartTime: number;
   gameMode: GameMode;
   hasStarted: boolean;             // true after startGame(); false on initial mount
@@ -132,13 +135,14 @@ function snapshot(): Pick<
 }
 
 function buildCompletedGame(
+  gameId: string,
   whitePlayer: string,
   blackPlayer: string,
   result: string,
   moveCount: number,
 ): CompletedGame {
   return {
-    gameId: crypto.randomUUID(),
+    gameId,
     timestamp: Date.now(),
     result,
     pgn: engine.getPGN("White", "Black", "OHS Chess Club", result),
@@ -163,6 +167,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   whitePlayer: "White",
   blackPlayer: "Black",
   activeColor: "w",
+  studentColor: null,
   studentId: null,
   isFullscreen: false,
   isBoardFlipped: false,
@@ -171,6 +176,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   openingViolations: [],
   annotations: {},
   lastMoveAt: 0,
+  gameId: null,
   gameStartTime: 0,
   gameMode: "casual",
   hasStarted: false,
@@ -188,6 +194,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       whitePlayer: opts.whitePlayer || "White",
       blackPlayer: opts.blackPlayer || "Black",
       studentId: opts.studentId ?? null,
+      studentColor: opts.studentId ? (opts.studentColor ?? "w") : null,
       gameMode: opts.mode ?? "casual",
       isBoardFlipped: !!opts.flipForBlack,
       isReviewing: false,
@@ -195,6 +202,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       openingViolations: [],
       annotations: {},
       lastMoveAt: now,
+      gameId: crypto.randomUUID(),
       gameStartTime: now,
       hasStarted: true,
       completedGame: null,
@@ -213,6 +221,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       timesPerMove: [],
       openingViolations: [],
       annotations: {},
+      gameId: null,
       hasStarted: false,
       completedGame: null,
     });
@@ -244,7 +253,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   tryMove: (from, to, promotion) => {
     const state = get();
-    if (state.isReviewing || state.isGameOver) return false;
+    if (!state.hasStarted || state.isReviewing || state.isGameOver) return false;
     const move = engine.makeMove(from, to, promotion);
     if (!move) return false;
     const now = Date.now();
@@ -255,7 +264,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Freeze a completed-game snapshot the moment the game ends so the data
     // is stable for export/archive even while the UI shows the game-over overlay.
     const completedGame: CompletedGame | null = snap.isGameOver
-      ? buildCompletedGame(state.whitePlayer, state.blackPlayer, snap.gameResult ?? "*", newHistory.length)
+      ? buildCompletedGame(state.gameId!, state.whitePlayer, state.blackPlayer, snap.gameResult ?? "*", newHistory.length)
       : null;
 
     set({
@@ -309,8 +318,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   resign: (loser) => {
     const state = get();
+    if (!state.hasStarted || state.isGameOver) return;
     const result = loser === "w" ? "0-1" : "1-0";
     const completedGame = buildCompletedGame(
+      state.gameId!,
       state.whitePlayer,
       state.blackPlayer,
       result,
@@ -327,8 +338,10 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   declareDraw: () => {
     const state = get();
+    if (!state.hasStarted || state.isGameOver) return;
     const result = "1/2-1/2";
     const completedGame = buildCompletedGame(
+      state.gameId!,
       state.whitePlayer,
       state.blackPlayer,
       result,
@@ -407,19 +420,19 @@ export const useGameStore = create<GameState>((set, get) => ({
 
   buildGameRecord: () => {
     const state = get();
-    if (!state.studentId) return null;
+    if (!state.studentId || !state.gameId) return null;
     const result = state.gameResult ?? "*";
     const pgn = engine.getPGN(state.whitePlayer, state.blackPlayer, "OHS Chess Club", result);
     return {
-      id: crypto.randomUUID(),
+      id: state.gameId,
       studentId: state.studentId,
       pgn,
       white: state.whitePlayer,
       black: state.blackPlayer,
       result,
-      date: new Date().toISOString(),
+      date: new Date(state.gameStartTime).toISOString(),
       moveCount: state.moveHistory.length,
-      duration: state.gameStartTime > 0 ? Date.now() - state.gameStartTime : 0,
+      duration: state.gameStartTime > 0 ? (state.completedGame?.timestamp ?? Date.now()) - state.gameStartTime : 0,
       timesPerMove: [...state.timesPerMove],
       openingViolations: [...state.openingViolations],
       annotations: { ...state.annotations },

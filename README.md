@@ -60,3 +60,11 @@ The legacy `.replit` configuration and Replit development packages are intention
 ## Firebase
 
 Firestore rules are retained in `firestore.rules`. Do not commit Firebase credentials or other secrets to this repository.
+
+## Development roadmap foundations
+
+- [Data integrity and backup compatibility](docs/DATA_INTEGRITY.md)
+- [Supabase account setup and rollout gates](docs/SUPABASE_SETUP.md)
+- [Shared learning evidence contract](docs/LEARNING_EVIDENCE.md)
+
+Run `pnpm test:chess` for data and account permission regression checks.

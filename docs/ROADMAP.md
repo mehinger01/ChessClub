@@ -1,5 +1,11 @@
 # ChessClub Roadmap
 
+> Historical roadmap. As of October 24, 2026, Supabase supersedes the Firebase
+> implementation direction below. Current implementation and rollout status is
+> recorded in [Supabase setup](SUPABASE_SETUP.md), [data integrity](DATA_INTEGRITY.md)
+> and the Notion Chess Master Development Roadmap. Earlier completion labels
+> are not a verified inventory of the current source.
+
 ## Vision
 
 Create a chess platform designed for schools, clubs, and coaches that combines:

@@ -39,5 +39,8 @@ jobs:
       - name: Typecheck chess app
         run: pnpm --filter @workspace/owls-chess typecheck
 
+      - name: Test chess data integrity
+        run: pnpm test:chess
+
       - name: Build chess app
         run: pnpm --filter @workspace/owls-chess build

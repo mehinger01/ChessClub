@@ -3,6 +3,8 @@
 // in here without touching app code.
 
 import { storage as localStorageEngine } from "../lib/storage";
+import { exportBackup, importBackup } from "../lib/backup";
+import { validatePuzzleLibrary } from "../lib/puzzleValidation";
 import { puzzles as bundledPuzzles } from "../data/puzzles";
 import type { Puzzle } from "../lib/storage";
 import type {
@@ -129,53 +131,8 @@ export const localStorageProvider: StorageProvider = {
     if (!raw) return null;
     try { return JSON.parse(raw); } catch { return null; }
   },
-  async exportData() {
-    const importedPuzzleLibrary = readImportedLibrary();
-    return {
-      version: 2,
-      exportedAt: new Date().toISOString(),
-      students: localStorageEngine.getStudents(),
-      attempts: localStorageEngine.getAttempts(),
-      settings: loadSettings(),
-      audit: readAudit(),
-      activeStudentId: localStorageEngine.getActiveStudentId(),
-      // Preserve the imported puzzle bank in full backups. null means this
-      // installation is using the bundled library shipped with the app.
-      puzzleLibrary: importedPuzzleLibrary,
-    };
-  },
-  async importData(payload) {
-    if (!payload || typeof payload !== "object") throw new Error("Invalid payload");
-    const p = payload as any;
-    if (Array.isArray(p.students)) localStorage.setItem("owls_students_v2", JSON.stringify(p.students));
-    if (Array.isArray(p.attempts)) localStorage.setItem("owls_attempts_v2", JSON.stringify(p.attempts));
-    if (p.settings && typeof p.settings === "object") saveSettings({ ...DEFAULT_SETTINGS, ...p.settings });
-    if (Array.isArray(p.audit)) writeAudit(p.audit);
-    if (typeof p.activeStudentId === "string") localStorage.setItem("owls_active_student", p.activeStudentId);
-
-    // Backward compatible: backups created before version 2 do not contain
-    // puzzleLibrary, so restoring one leaves the current puzzle bank alone.
-    if (Object.prototype.hasOwnProperty.call(p, "puzzleLibrary")) {
-      if (p.puzzleLibrary === null) {
-        clearImportedLibrary();
-      } else if (Array.isArray(p.puzzleLibrary)) {
-        const errors: string[] = [];
-        for (let i = 0; i < p.puzzleLibrary.length; i++) {
-          for (const error of validatePuzzleShape(p.puzzleLibrary[i])) {
-            errors.push(`puzzleLibrary[${i}]: ${error}`);
-          }
-        }
-        if (errors.length > 0) {
-          throw new Error(`Invalid puzzle library in backup: ${errors[0]}`);
-        }
-        writeImportedLibrary(p.puzzleLibrary as Puzzle[]);
-      } else {
-        throw new Error("Invalid puzzle library in backup: expected an array or null");
-      }
-    }
-
-    window.dispatchEvent(new Event("owls-storage"));
-  },
+  exportData() { return exportBackup(DEFAULT_SETTINGS); },
+  importData(payload) { return importBackup(payload, DEFAULT_SETTINGS); },
 };
 
 // ----- Database provider (delegates to existing storage layer) -----
@@ -248,23 +205,6 @@ export function clearImportedLibrary() {
   window.dispatchEvent(new Event("owls-puzzles"));
 }
 
-function validatePuzzleShape(p: any): string[] {
-  const errs: string[] = [];
-  if (!p || typeof p !== "object") return ["not an object"];
-  if (typeof p.id !== "string") errs.push("missing id");
-  if (typeof p.title !== "string") errs.push("missing title");
-  if (typeof p.theme !== "string") errs.push("missing theme");
-  if (typeof p.difficulty !== "number") errs.push("missing difficulty");
-  if (p.sideToMove !== "white" && p.sideToMove !== "black") errs.push("sideToMove must be white|black");
-  if (typeof p.fen !== "string") errs.push("missing fen");
-  if (!Array.isArray(p.solution) || p.solution.some((m: any) => typeof m !== "string")) errs.push("solution must be string[]");
-  if (!Array.isArray(p.hints) || p.hints.length !== 3) errs.push("hints must be [string,string,string]");
-  if (typeof p.explanation !== "string") errs.push("missing explanation");
-  if (typeof p.feedbackCorrect !== "string") errs.push("missing feedbackCorrect");
-  if (typeof p.feedbackIncorrect !== "string") errs.push("missing feedbackIncorrect");
-  return errs;
-}
-
 export const localPuzzleSourceProvider: PuzzleSourceProvider = {
   id: "local",
   async loadLibrary() {
@@ -282,11 +222,7 @@ export const localPuzzleSourceProvider: PuzzleSourceProvider = {
   },
   validateLibrary(json) {
     if (!Array.isArray(json)) return { ok: false, errors: ["root must be an array of puzzles"] };
-    const errors: string[] = [];
-    for (let i = 0; i < json.length; i++) {
-      const errs = validatePuzzleShape(json[i]);
-      for (const e of errs) errors.push(`puzzle[${i}]: ${e}`);
-    }
+    const errors = validatePuzzleLibrary(json);
     return { ok: errors.length === 0, errors };
   },
 };

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "./components/ui/sonner";
@@ -12,6 +12,7 @@ import Roster from "./pages/roster";
 import Admin from "./pages/admin";
 import Settings from "./pages/settings";
 import { useSettings } from "./hooks/use-settings";
+const StudentAccounts = lazy(() => import("./components/accounts").then(module => ({ default: module.StudentAccounts })));
 
 const queryClient = new QueryClient();
 
@@ -55,6 +56,9 @@ function Router() {
 }
 
 function App() {
+  if (import.meta.env.VITE_CHESS_ACCOUNTS_ENABLED === "true") {
+    return <Suspense fallback={<main className="p-8" role="status">Loading your account…</main>}><StudentAccounts /></Suspense>;
+  }
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
