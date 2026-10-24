@@ -16,7 +16,6 @@ import { Archive, Trophy, X } from "lucide-react";
 import { toast } from "sonner";
 import { useGameStore } from "../stores/gameStore";
 import { useSettings } from "../hooks/use-settings";
-import { useStudents } from "../hooks/use-students";
 import { getTheme } from "../lib/themes";
 import { getPieceSet } from "../lib/piece-sets";
 import { getProviders } from "../providers";
@@ -34,7 +33,7 @@ import { getAttackers, getPieceCode, PIECE_NAMES, squareToPercent } from "../lib
 import { useStudentStore } from "../stores/studentStore";
 
 export default function Play() {
-  const { activeStudent, recordGameResult } = useStudents();
+  const recordGameResult = useStudentStore(s => s.recordGameResult);
   const { settings } = useSettings();
   const theme = getTheme(settings.activeThemeId);
   const ui = settings.uiPreferences;
@@ -101,9 +100,9 @@ export default function Play() {
   // Archive modal
   const [archiveOpen, setArchiveOpen] = useState(false);
 
-  // Game-over result-record state
-  const [resultRecorded, setResultRecorded] = useState(false);
-  useEffect(() => { if (!isGameOver) setResultRecorded(false); }, [isGameOver]);
+  const gameId = useGameStore(s => s.gameId);
+  const studentColor = useGameStore(s => s.studentColor);
+  const boundStudent = useStudentStore(s => s.students.find(student => student.id === studentId));
 
   // Auto-save the full PGN GameRecord exactly once when the game ends.
   const saveGameRecord = useStudentStore(s => s.saveGameRecord);
@@ -114,7 +113,6 @@ export default function Play() {
     if (!isGameOver || gameRecordSaved) return;
     const rec = buildGameRecord();
     if (!rec) return;
-    if (rec.moveCount === 0) return;
     saveGameRecord(rec);
     setGameRecordSaved(true);
     getProviders().audit.log({
@@ -131,7 +129,6 @@ export default function Play() {
   useEffect(() => { if (!isGameOver) setArchivedGameId(null); }, [isGameOver]);
   useEffect(() => {
     if (!completedGame) return;
-    if (completedGame.moveCount === 0) return;
     if (archivedGameId === completedGame.gameId) return;
     gameArchive.save(completedGame);
     setArchivedGameId(completedGame.gameId);
@@ -224,35 +221,27 @@ export default function Play() {
     trySelect(square);
   }, [tryMove, trySelect]);
 
-  // Game-end stat record
-  const recordResult = (result: "win" | "loss" | "draw") => {
-    if (!activeStudent) { toast.error("Select a student first"); return; }
-    recordGameResult(result);
-    setResultRecorded(true);
-    getProviders().audit.log({
-      actorUserId: "local-admin",
-      actionType: "game.recorded",
-      targetType: "student",
-      targetId: activeStudent.id,
-      details: { result, studentBoundToGame: studentId },
-    });
-    toast.success(`Recorded ${result} for ${activeStudent.displayName}`);
+  // Identity is captured at game start; switching the header cannot reassign a result.
+  const suggestedResult: "win" | "loss" | "draw" | null = !isGameOver || !studentColor ? null
+    : gameResult === "1/2-1/2" ? "draw"
+    : (gameResult === "1-0" ? studentColor === "w" : studentColor === "b") ? "win" : "loss";
+  const resultRecorded = !!gameId && !!suggestedResult && boundStudent?.recordedGameResults?.[gameId] === suggestedResult;
+  const recordResult = () => {
+    if (!boundStudent || !gameId || !suggestedResult) return;
+    try {
+      const changed = recordGameResult(suggestedResult, gameId, boundStudent.id);
+      if (changed) getProviders().audit.log({
+        actorUserId: "local-admin", actionType: "game.recorded", targetType: "student",
+        targetId: boundStudent.id, details: { result: suggestedResult, gameId },
+      });
+      toast.success(`Recorded ${suggestedResult} for ${boundStudent.displayName}`);
+    } catch { toast.error("The result could not be saved. Keep this page open and try again."); }
   };
 
   const onNewGameRequested = useCallback(() => {
     resetToNewBoard();
     setPregameOpen(true);
   }, [resetToNewBoard]);
-
-  const suggestedResult: "win" | "loss" | "draw" | null = useMemo(() => {
-    if (!isGameOver || !gameResult || !activeStudent) return null;
-    if (gameResult === "1/2-1/2") return "draw";
-    const studentPlayedWhite = activeStudent.id === studentId && whitePlayer === activeStudent.displayName;
-    const studentPlayedBlack = activeStudent.id === studentId && blackPlayer === activeStudent.displayName;
-    if (gameResult === "1-0") return studentPlayedWhite ? "win" : studentPlayedBlack ? "loss" : null;
-    if (gameResult === "0-1") return studentPlayedBlack ? "win" : studentPlayedWhite ? "loss" : null;
-    return null;
-  }, [isGameOver, gameResult, activeStudent, studentId, whitePlayer, blackPlayer]);
 
   // ─── Shared board inner elements ─────────────────────────────────────────
   const orientation = isBoardFlipped ? "black" : "white";
@@ -356,26 +345,24 @@ export default function Play() {
           <p className="text-sm text-muted-foreground mt-1">{moveCount} moves played.</p>
         </div>
         <CardContent className="space-y-3 pt-2 pb-5">
-          {activeStudent && !resultRecorded && (
+          {boundStudent && !resultRecorded && (
             <>
               <div className="text-sm text-center text-muted-foreground">
-                Record this result for <span className="font-semibold text-foreground">{activeStudent.displayName}</span>?
+                Record this result for <span className="font-semibold text-foreground">{boundStudent.displayName}</span>?
               </div>
-              <div className="grid grid-cols-3 gap-2">
-                <Button variant={suggestedResult === "win"  ? "default" : "outline"} onClick={() => recordResult("win")}  data-testid="record-win">Win</Button>
-                <Button variant={suggestedResult === "draw" ? "default" : "outline"} onClick={() => recordResult("draw")} data-testid="record-draw">Draw</Button>
-                <Button variant={suggestedResult === "loss" ? "default" : "outline"} onClick={() => recordResult("loss")} data-testid="record-loss">Loss</Button>
-              </div>
+              <Button className="w-full" onClick={recordResult} disabled={!suggestedResult} data-testid="record-result">
+                Record {suggestedResult ?? "result"}
+              </Button>
             </>
           )}
-          {activeStudent && resultRecorded && (
+          {boundStudent && resultRecorded && (
             <div className="text-sm text-center text-green-600 dark:text-green-400">
-              Recorded for {activeStudent.displayName}.
+              Recorded for {boundStudent.displayName}.
             </div>
           )}
-          {!activeStudent && (
+          {!boundStudent && (
             <div className="text-xs text-center text-muted-foreground">
-              Select a student in the header to record this game.
+              This game has no available student record. Select a student before starting the next game.
             </div>
           )}
           <Button className="w-full" onClick={onNewGameRequested} data-testid="game-over-new">

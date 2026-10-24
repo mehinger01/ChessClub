@@ -26,7 +26,7 @@ interface StudentState {
 
   // Puzzle / game stats (Phase 1 puzzle UI keeps using these)
   recordPuzzleAttempt: (puzzle: LegacyPuzzle, opts: { correct: boolean; hintsUsed: number }) => void;
-  recordGameResult: (result: "win" | "loss" | "draw") => void;
+  recordGameResult: (result: "win" | "loss" | "draw", gameId?: string, studentId?: string) => boolean;
   resetStudentSession: (id: string) => void;
 
   // Game records (PGN history) — new in Phase 1
@@ -90,12 +90,13 @@ export const useStudentStore = create<StudentState>((set, get) => {
       broadcastStorage();
     },
 
-    recordGameResult: (result) => {
-      const id = get().activeStudentId;
-      if (!id) return;
-      storage.recordGameResult(id, result);
+    recordGameResult: (result, gameId, studentId) => {
+      const id = studentId ?? get().activeStudentId;
+      if (!id) return false;
+      const recorded = storage.recordGameResult(id, result, gameId);
       get().refreshFromStorage();
       broadcastStorage();
+      return recorded;
     },
 
     resetStudentSession: (id) => {

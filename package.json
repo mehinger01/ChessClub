@@ -9,11 +9,16 @@
     "typecheck:chess": "pnpm --filter @workspace/owls-chess typecheck",
     "build": "pnpm run typecheck && pnpm -r --if-present run build",
     "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck",
+    "test:chess": "node --require ./scripts/register-chess-tests.cjs --test artifacts/owls-chess/tests/*.test.cjs",
+    "test:chess:browser": "node scripts/verify-chess-browser.cjs"
   },
   "private": true,
   "devDependencies": {
-    "typescript": "~5.9.2",
-    "prettier": "^3.8.1"
+    "@electric-sql/pglite": "0.5.11",
+    "fake-indexeddb": "6.2.4",
+    "playwright": "1.62.1",
+    "prettier": "^3.8.1",
+    "typescript": "~5.9.2"
   }
 }

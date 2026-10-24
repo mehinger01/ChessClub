@@ -52,6 +52,7 @@ export function PreGameDialog({ open, onOpenChange }: PreGameDialogProps) {
       blackPlayer: b,
       mode,
       studentId: activeStudent?.id ?? null,
+      studentColor: studentSide === "white" ? "w" : "b",
       flipForBlack: !!activeStudent && studentSide === "black",
     });
     onOpenChange(false);

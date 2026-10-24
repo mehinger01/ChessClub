@@ -17,6 +17,7 @@ export interface Student {
   puzzlesIncorrect: number;
   puzzleScore: number;
   gamesPlayed: number;
+  recordedGameResults?: Record<string, "win" | "loss" | "draw">; // stored with counters
   wins: number;
   losses: number;
   draws: number;
@@ -75,6 +76,7 @@ function migrateStudent(raw: any): Student {
     puzzlesIncorrect: raw.puzzlesIncorrect ?? Math.max(0, (raw.attempts ?? 0) - (raw.solved ?? 0)),
     puzzleScore: raw.puzzleScore ?? (raw.solved ?? 0) * 2,
     gamesPlayed: raw.gamesPlayed ?? 0,
+    recordedGameResults: raw.recordedGameResults ?? {},
     wins: raw.wins ?? 0,
     losses: raw.losses ?? 0,
     draws: raw.draws ?? 0,
@@ -260,15 +262,22 @@ export const storage = {
     return attempt;
   },
 
-  recordGameResult: (studentId: string, result: "win" | "loss" | "draw") => {
-    storage.updateStudent(studentId, s => ({
+  recordGameResult: (studentId: string, result: "win" | "loss" | "draw", gameId?: string): boolean => {
+    const students = storage.getStudents();
+    const student = students.find(s => s.id === studentId);
+    if (!student) return false;
+    const previous = gameId ? student.recordedGameResults?.[gameId] : undefined;
+    if (previous === result) return false;
+    storage.saveStudents(students.map(s => s.id !== studentId ? s : {
       ...s,
-      gamesPlayed: s.gamesPlayed + 1,
-      wins: s.wins + (result === "win" ? 1 : 0),
-      losses: s.losses + (result === "loss" ? 1 : 0),
-      draws: s.draws + (result === "draw" ? 1 : 0),
+      gamesPlayed: s.gamesPlayed + (previous ? 0 : 1),
+      wins: s.wins + (result === "win" ? 1 : 0) - (previous === "win" ? 1 : 0),
+      losses: s.losses + (result === "loss" ? 1 : 0) - (previous === "loss" ? 1 : 0),
+      draws: s.draws + (result === "draw" ? 1 : 0) - (previous === "draw" ? 1 : 0),
+      recordedGameResults: gameId ? { ...s.recordedGameResults, [gameId]: result } : s.recordedGameResults,
       lastActive: Date.now(),
     }));
+    return true;
   },
 
   resetStudentSession: (studentId: string) => {
@@ -284,7 +293,7 @@ export const storage = {
   saveGameRecord: (record: StoredGameRecord) => {
     const all = readGameRecords();
     const list = all[record.studentId] ?? [];
-    all[record.studentId] = [...list, record];
+    all[record.studentId] = [...list.filter(r => r.id !== record.id), record];
     writeGameRecords(all);
   },
 
